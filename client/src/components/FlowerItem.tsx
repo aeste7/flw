@@ -3,7 +3,7 @@ import { Warehouse } from "@shared/schema";
 import { format } from "date-fns";
 import { MoreVertical, Edit, Plus, Trash, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -148,13 +148,26 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
     }
   });
   
+  // State for write-off form
+  const [showWriteOffModal, setShowWriteOffModal] = useState(false);
+  const [writeOffAmount, setWriteOffAmount] = useState(1);
+  
   // Handle write-off
   const handleWriteOff = () => {
     setShowContextMenu(false);
+    setWriteOffAmount(1); // Reset to 1
+    setShowWriteOffModal(true);
+  };
+  
+  // Handle write-off submission
+  const handleWriteOffSubmit = () => {
+    if (writeOffAmount <= 0 || writeOffAmount > flower.amount) return;
+    
     writeoffMutation.mutate({ 
       flowerId: flower.id, 
-      amount: 1 // For simplicity, just write off 1 flower
+      amount: writeOffAmount
     });
+    setShowWriteOffModal(false);
   };
   
   // Handle write-off all
@@ -337,6 +350,64 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Write-Off Modal */}
+      <Dialog open={showWriteOffModal} onOpenChange={setShowWriteOffModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Write-Off Flowers</DialogTitle>
+            <DialogDescription>
+              Specify the amount of flowers to write off from inventory.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Flower Type</Label>
+              <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
+                {flower.flower}
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="writeOffAmount">Amount to Write-Off</Label>
+              <div className="flex items-center space-x-2">
+                <Input 
+                  id="writeOffAmount"
+                  type="number"
+                  min={1}
+                  max={flower.amount}
+                  value={writeOffAmount}
+                  onChange={(e) => setWriteOffAmount(parseInt(e.target.value) || 0)}
+                  className="flex-1"
+                />
+                <span className="text-sm text-gray-500">
+                  / {flower.amount} available
+                </span>
+              </div>
+              {writeOffAmount > flower.amount && (
+                <p className="text-sm text-red-500">Cannot write off more than available amount</p>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowWriteOffModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={handleWriteOffSubmit}
+                disabled={writeOffAmount <= 0 || writeOffAmount > flower.amount || writeoffMutation.isPending}
+              >
+                {writeoffMutation.isPending ? "Processing..." : "Write-Off"}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </>
