@@ -28,7 +28,6 @@ export default function NewOrder() {
   
   // Form schema
   const formSchema = z.object({
-    bouquet: z.string().min(1, "Bouquet name is required"),
     from: z.string().min(1, "Sender name is required"),
     to: z.string().min(1, "Recipient name is required"),
     address: z.string().min(1, "Delivery address is required"),
@@ -41,7 +40,6 @@ export default function NewOrder() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      bouquet: "",
       from: "",
       to: "",
       address: "",
@@ -87,7 +85,6 @@ export default function NewOrder() {
       // Create order
       await apiRequest('POST', '/api/orders', {
         order: {
-          bouquet: data.bouquet,
           from: data.from,
           to: data.to,
           address: data.address,
@@ -129,19 +126,6 @@ export default function NewOrder() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-              <FormField
-                control={form.control}
-                name="bouquet"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bouquet Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter bouquet name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               
               <div>
                 <Label htmlFor="flowers" className="block text-sm font-medium text-gray-700 mb-1">

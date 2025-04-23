@@ -64,7 +64,6 @@ export type Note = typeof notes.$inferSelect;
 // Orders Table
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
-  bouquet: text("bouquet").notNull(),
   from: text("from").notNull(),
   to: text("to").notNull(),
   address: text("address").notNull(),

@@ -95,7 +95,6 @@ export default function OrderItem({ order, onView, onEdit }: OrderItemProps) {
         <div className="flex justify-between items-start">
           <div>
             <h4 className="font-medium">Order #{order.id}</h4>
-            <p className="text-sm text-gray-600">{order.bouquet}</p>
           </div>
           <StatusBadge status={order.status as OrderStatus} />
         </div>
