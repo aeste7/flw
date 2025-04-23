@@ -316,4 +316,234 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { db } from "./db";
+import { 
+  warehouse as warehouseTable,
+  writeoffs as writeoffsTable,
+  notes as notesTable,
+  orders as ordersTable,
+  orderItems as orderItemsTable,
+  users as usersTable
+} from "@shared/schema";
+import { and, eq, desc } from "drizzle-orm";
+
+export class DatabaseStorage implements IStorage {
+  // User methods
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(usersTable)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  // Warehouse methods
+  async getFlowers(): Promise<Warehouse[]> {
+    return await db.select().from(warehouseTable).orderBy(warehouseTable.id);
+  }
+
+  async getFlower(id: number): Promise<Warehouse | undefined> {
+    const [flower] = await db.select().from(warehouseTable).where(eq(warehouseTable.id, id));
+    return flower || undefined;
+  }
+
+  async getFlowerByName(name: string): Promise<Warehouse | undefined> {
+    const [flower] = await db.select().from(warehouseTable).where(eq(warehouseTable.flower, name));
+    return flower || undefined;
+  }
+
+  async addFlowers(insertFlower: InsertWarehouse): Promise<Warehouse> {
+    // Check if flower already exists
+    const existingFlower = await this.getFlowerByName(insertFlower.flower);
+    
+    if (existingFlower) {
+      // Update existing flower
+      const [updatedFlower] = await db
+        .update(warehouseTable)
+        .set({ 
+          amount: existingFlower.amount + insertFlower.amount,
+          dateTime: new Date()
+        })
+        .where(eq(warehouseTable.id, existingFlower.id))
+        .returning();
+      return updatedFlower;
+    } 
+    
+    // Add new flower
+    const [flower] = await db
+      .insert(warehouseTable)
+      .values({ 
+        ...insertFlower,
+        dateTime: new Date()
+      })
+      .returning();
+    return flower;
+  }
+
+  async updateFlowers(id: number, flowerUpdate: Partial<InsertWarehouse>): Promise<Warehouse | undefined> {
+    const [updatedFlower] = await db
+      .update(warehouseTable)
+      .set({ 
+        ...flowerUpdate,
+        dateTime: new Date()
+      })
+      .where(eq(warehouseTable.id, id))
+      .returning();
+    
+    return updatedFlower || undefined;
+  }
+
+  // Writeoffs methods
+  async getWriteoffs(): Promise<Writeoff[]> {
+    return await db.select().from(writeoffsTable).orderBy(desc(writeoffsTable.dateTime));
+  }
+
+  async addWriteoff(insertWriteoff: InsertWriteoff): Promise<Writeoff> {
+    const [writeoff] = await db
+      .insert(writeoffsTable)
+      .values({ 
+        ...insertWriteoff,
+        dateTime: new Date()
+      })
+      .returning();
+    
+    // Update warehouse
+    const flower = await this.getFlowerByName(insertWriteoff.flower);
+    if (flower) {
+      const updatedAmount = Math.max(0, flower.amount - insertWriteoff.amount);
+      await this.updateFlowers(flower.id, { amount: updatedAmount });
+    }
+    
+    return writeoff;
+  }
+
+  // Notes methods
+  async getNotes(): Promise<Note[]> {
+    return await db.select().from(notesTable).orderBy(desc(notesTable.dateTime));
+  }
+
+  async getNote(id: number): Promise<Note | undefined> {
+    const [note] = await db.select().from(notesTable).where(eq(notesTable.id, id));
+    return note || undefined;
+  }
+
+  async addNote(insertNote: InsertNote): Promise<Note> {
+    const [note] = await db
+      .insert(notesTable)
+      .values({ 
+        ...insertNote,
+        dateTime: new Date()
+      })
+      .returning();
+    return note;
+  }
+
+  async updateNote(id: number, noteUpdate: Partial<InsertNote>): Promise<Note | undefined> {
+    const [updatedNote] = await db
+      .update(notesTable)
+      .set({ 
+        ...noteUpdate,
+        dateTime: new Date()
+      })
+      .where(eq(notesTable.id, id))
+      .returning();
+    
+    return updatedNote || undefined;
+  }
+
+  async deleteNote(id: number): Promise<boolean> {
+    const result = await db
+      .delete(notesTable)
+      .where(eq(notesTable.id, id))
+      .returning({ id: notesTable.id });
+    
+    return result.length > 0;
+  }
+
+  // Orders methods
+  async getOrders(): Promise<Order[]> {
+    return await db.select().from(ordersTable).orderBy(desc(ordersTable.dateTime));
+  }
+
+  async getOrder(id: number): Promise<Order | undefined> {
+    const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
+    return order || undefined;
+  }
+
+  async createOrder(insertOrder: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
+    // Create the order
+    const [order] = await db
+      .insert(ordersTable)
+      .values({
+        ...insertOrder,
+        status: insertOrder.status || OrderStatus.New
+      })
+      .returning();
+    
+    // Add order items
+    for (const item of items) {
+      await db
+        .insert(orderItemsTable)
+        .values({
+          ...item,
+          orderId: order.id
+        });
+      
+      // Update warehouse inventory
+      const flower = await this.getFlowerByName(item.flower);
+      if (flower) {
+        const updatedAmount = Math.max(0, flower.amount - item.amount);
+        await this.updateFlowers(flower.id, { amount: updatedAmount });
+      }
+    }
+    
+    return order;
+  }
+
+  async updateOrderStatus(id: number, status: string): Promise<Order | undefined> {
+    const [updatedOrder] = await db
+      .update(ordersTable)
+      .set({ status })
+      .where(eq(ordersTable.id, id))
+      .returning();
+    
+    return updatedOrder || undefined;
+  }
+
+  async updateOrder(id: number, orderUpdate: Partial<InsertOrder>): Promise<Order | undefined> {
+    const [updatedOrder] = await db
+      .update(ordersTable)
+      .set(orderUpdate)
+      .where(eq(ordersTable.id, id))
+      .returning();
+    
+    return updatedOrder || undefined;
+  }
+
+  async deleteOrder(id: number): Promise<boolean> {
+    // Mark as deleted instead of removing
+    const result = await this.updateOrderStatus(id, OrderStatus.Deleted);
+    return !!result;
+  }
+
+  // Order Items methods
+  async getOrderItems(orderId: number): Promise<OrderItem[]> {
+    return await db
+      .select()
+      .from(orderItemsTable)
+      .where(eq(orderItemsTable.orderId, orderId));
+  }
+}
+
+// Use the database storage instead of memory storage
+export const storage = new DatabaseStorage();
