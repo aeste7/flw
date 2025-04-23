@@ -155,8 +155,8 @@ export default function Warehouse() {
   });
 
   // Format date for display
-  const formatDate = (isoString: string) => {
-    const date = new Date(isoString);
+  const formatDate = (dateTime: string | Date) => {
+    const date = typeof dateTime === 'string' ? new Date(dateTime) : dateTime;
     return format(date, "MMMM d, yyyy 'at' h:mm a");
   };
 
@@ -280,7 +280,7 @@ export default function Warehouse() {
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-medium">{writeoff.flower}</h4>
-                        <p className="text-sm text-gray-600">{formatDate(writeoff.date)}</p>
+                        <p className="text-sm text-gray-600">{formatDate(writeoff.dateTime)}</p>
                       </div>
                       <span className="bg-rose-100 text-rose-700 px-2 py-1 rounded text-xs font-medium">
                         -{writeoff.amount} pcs

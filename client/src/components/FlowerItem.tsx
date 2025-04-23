@@ -117,10 +117,55 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
     addFlowersMutation.mutate(values);
   };
   
-  // Handle write-off navigation
+  // Writeoff mutation
+  const writeoffMutation = useMutation({
+    mutationFn: async ({ flowerId, amount }: { flowerId: number, amount: number }) => {
+      await apiRequest('POST', '/api/writeoffs', { 
+        flower: flower.flower,
+        amount: amount
+      });
+      
+      // Update flower inventory by subtracting the amount
+      await apiRequest('PUT', `/api/flowers/${flowerId}`, { 
+        amount: Math.max(0, flower.amount - amount)
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/writeoffs'] });
+      setShowContextMenu(false);
+      toast({
+        title: "Success",
+        description: "Flowers written off successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to write off flowers: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Handle write-off
   const handleWriteOff = () => {
     setShowContextMenu(false);
-    navigate(`/write-off/${flower.id}`);
+    writeoffMutation.mutate({ 
+      flowerId: flower.id, 
+      amount: 1 // For simplicity, just write off 1 flower
+    });
+  };
+  
+  // Handle write-off all
+  const handleWriteOffAll = () => {
+    setShowContextMenu(false);
+    if (flower.amount > 0) {
+      writeoffMutation.mutate({ 
+        flowerId: flower.id, 
+        amount: flower.amount
+      });
+    }
   };
   
   return (
@@ -179,6 +224,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
               variant="ghost" 
               className="w-full text-left py-3 px-4 justify-start rounded-none"
               onClick={handleWriteOff}
+              disabled={flower.amount === 0 || writeoffMutation.isPending}
             >
               <Trash className="h-5 w-5 text-gray-400 mr-3" />
               <span>Write-Off</span>
@@ -187,10 +233,8 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
             <Button 
               variant="ghost" 
               className="w-full text-left py-3 px-4 justify-start rounded-none text-red-500"
-              onClick={() => {
-                setShowContextMenu(false);
-                navigate(`/write-off/${flower.id}?all=true`);
-              }}
+              onClick={handleWriteOffAll}
+              disabled={flower.amount === 0 || writeoffMutation.isPending}
             >
               <Trash2 className="h-5 w-5 text-red-500 mr-3" />
               <span>Write-Off All</span>

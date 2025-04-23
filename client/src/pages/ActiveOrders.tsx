@@ -196,8 +196,8 @@ export default function ActiveOrders() {
   };
   
   // Format date time for display
-  const formatDateTime = (isoString: string) => {
-    const date = new Date(isoString);
+  const formatDateTime = (dateTime: string | Date) => {
+    const date = typeof dateTime === 'string' ? new Date(dateTime) : dateTime;
     return format(date, "MMMM d, yyyy 'at' h:mm a");
   };
   
@@ -340,7 +340,7 @@ export default function ActiveOrders() {
                       {orderItems.map(item => (
                         <li key={item.id} className="text-sm">
                           <div className="flex justify-between">
-                            <span>{item.flowerName}</span>
+                            <span>{item.flower}</span>
                             <span>{item.amount} pcs</span>
                           </div>
                         </li>
