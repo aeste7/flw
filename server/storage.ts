@@ -44,6 +44,8 @@ export interface IStorage {
 
   // Order Items methods
   getOrderItems(orderId: number): Promise<OrderItem[]>;
+  createOrderItem(item: InsertOrderItem): Promise<OrderItem>;
+  deleteOrderItem(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -246,7 +248,9 @@ export class MemStorage implements IStorage {
     const id = this.currentOrderId++;
     const order: Order = { 
       ...insertOrder, 
-      id 
+      id,
+      status: insertOrder.status || OrderStatus.New,
+      notes: insertOrder.notes || null
     };
     
     this.orders.set(id, order);
@@ -290,9 +294,15 @@ export class MemStorage implements IStorage {
     const order = this.orders.get(id);
     if (!order) return undefined;
 
+    // Ensure notes is properly set to null if undefined
+    const processedUpdate = {
+      ...orderUpdate,
+      notes: orderUpdate.notes === undefined ? order.notes : orderUpdate.notes
+    };
+
     const updatedOrder = {
       ...order,
-      ...orderUpdate,
+      ...processedUpdate,
     };
     
     this.orders.set(id, updatedOrder);
@@ -313,6 +323,29 @@ export class MemStorage implements IStorage {
     return Array.from(this.orderItems.values()).filter(
       (item) => item.orderId === orderId
     );
+  }
+  
+  async createOrderItem(item: InsertOrderItem): Promise<OrderItem> {
+    const id = this.currentOrderItemId++;
+    const orderItem: OrderItem = {
+      ...item,
+      id
+    };
+    
+    this.orderItems.set(id, orderItem);
+    
+    // Update warehouse inventory
+    const flower = await this.getFlowerByName(item.flower);
+    if (flower) {
+      const updatedAmount = Math.max(0, flower.amount - item.amount);
+      await this.updateFlowers(flower.id, { amount: updatedAmount });
+    }
+    
+    return orderItem;
+  }
+  
+  async deleteOrderItem(id: number): Promise<boolean> {
+    return this.orderItems.delete(id);
   }
 }
 
@@ -521,9 +554,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateOrder(id: number, orderUpdate: Partial<InsertOrder>): Promise<Order | undefined> {
+    // Get current order to properly handle notes
+    const currentOrder = await this.getOrder(id);
+    if (!currentOrder) return undefined;
+    
+    // Process the update to ensure notes is properly handled
+    const processedUpdate = {
+      ...orderUpdate,
+      notes: orderUpdate.notes === undefined ? currentOrder.notes : orderUpdate.notes
+    };
+    
     const [updatedOrder] = await db
       .update(ordersTable)
-      .set(orderUpdate)
+      .set(processedUpdate)
       .where(eq(ordersTable.id, id))
       .returning();
     
@@ -542,6 +585,31 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(orderItemsTable)
       .where(eq(orderItemsTable.orderId, orderId));
+  }
+  
+  async createOrderItem(item: InsertOrderItem): Promise<OrderItem> {
+    const [orderItem] = await db
+      .insert(orderItemsTable)
+      .values(item)
+      .returning();
+    
+    // Update warehouse inventory
+    const flower = await this.getFlowerByName(item.flower);
+    if (flower) {
+      const updatedAmount = Math.max(0, flower.amount - item.amount);
+      await this.updateFlowers(flower.id, { amount: updatedAmount });
+    }
+    
+    return orderItem;
+  }
+  
+  async deleteOrderItem(id: number): Promise<boolean> {
+    const result = await db
+      .delete(orderItemsTable)
+      .where(eq(orderItemsTable.id, id))
+      .returning({ id: orderItemsTable.id });
+    
+    return result.length > 0;
   }
 }
 
