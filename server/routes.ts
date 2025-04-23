@@ -251,13 +251,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/orders/:id', async (req: Request, res: Response) => {
     try {
-      const validatedData = insertOrderSchema.partial().extend({
-        dateTime: z.string().transform(val => new Date(val)).optional(),
-      }).parse(req.body);
-      const updatedOrder = await storage.updateOrder(Number(req.params.id), validatedData);
+      const updateOrderSchema = z.object({
+        order: insertOrderSchema.partial().extend({
+          dateTime: z.string().transform(val => new Date(val)).optional(),
+        }),
+        items: z.array(z.object({
+          flower: z.string(),
+          amount: z.number().min(1)
+        })).optional()
+      });
+      
+      const { order: validatedOrder, items } = updateOrderSchema.parse(req.body);
+      const updatedOrder = await storage.updateOrder(Number(req.params.id), validatedOrder);
       
       if (!updatedOrder) {
         return res.status(404).json({ message: 'Order not found' });
+      }
+      
+      // Update the items if provided
+      if (items && items.length > 0) {
+        // First delete existing items
+        const orderId = Number(req.params.id);
+        const currentItems = await storage.getOrderItems(orderId);
+        for (const item of currentItems) {
+          await storage.deleteOrderItem(item.id);
+        }
+        
+        // Then add new items
+        for (const item of items) {
+          await storage.createOrderItem({
+            orderId,
+            flower: item.flower,
+            amount: item.amount
+          });
+        }
       }
       
       return res.json(updatedOrder);

@@ -37,6 +37,7 @@ export default function ActiveOrders() {
   const [editOrder, setEditOrder] = useState<Order | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedFlowers, setSelectedFlowers] = useState<Map<number, number>>(new Map());
   
   // Form state for editing
   const [formData, setFormData] = useState({
@@ -45,6 +46,11 @@ export default function ActiveOrders() {
     address: '',
     dateTime: '',
     notes: '',
+  });
+  
+  // Query for available flowers
+  const { data: flowers = [] } = useQuery<Warehouse[]>({
+    queryKey: ['/api/flowers'],
   });
   
   // Set form data when edit dialog opens
@@ -73,11 +79,48 @@ export default function ActiveOrders() {
     queryKey: ['/api/orders'],
   });
   
-  // Query for order items
+  // Query for order items when viewing
   const { data: orderItems = [], isLoading: isItemsLoading } = useQuery<OrderItemType[]>({
     queryKey: ['/api/orders', viewOrder?.id, 'items'],
     enabled: !!viewOrder,
   });
+  
+  // Query for order items when editing
+  const { data: editOrderItems = [], isLoading: isEditItemsLoading } = useQuery<OrderItemType[]>({
+    queryKey: ['/api/orders', editOrder?.id, 'items'],
+    enabled: !!editOrder
+  });
+  
+  // Effect to set selected flowers when edit items are loaded
+  useEffect(() => {
+    if (editOrderItems && editOrderItems.length > 0 && flowers.length > 0) {
+      // Initialize the selectedFlowers map from the order items
+      const newSelectedFlowers = new Map<number, number>();
+      
+      editOrderItems.forEach((item: OrderItemType) => {
+        // Find the flower in the available flowers
+        const flower = flowers.find(f => f.flower === item.flower);
+        if (flower) {
+          newSelectedFlowers.set(flower.id, item.amount);
+        }
+      });
+      
+      setSelectedFlowers(newSelectedFlowers);
+    }
+  }, [editOrderItems, flowers]);
+  
+  // Handle flower selection
+  const handleSelectFlower = (flowerId: number, amount: number) => {
+    const newSelectedFlowers = new Map(selectedFlowers);
+    
+    if (amount === 0) {
+      newSelectedFlowers.delete(flowerId);
+    } else {
+      newSelectedFlowers.set(flowerId, amount);
+    }
+    
+    setSelectedFlowers(newSelectedFlowers);
+  };
   
   // Mutation for updating order
   const updateOrderMutation = useMutation({
@@ -185,14 +228,36 @@ export default function ActiveOrders() {
     
     const dateTime = new Date(formData.dateTime);
     
+    // Prepare order items
+    const items = Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
+      const flower = flowers.find(f => f.id === flowerId);
+      return {
+        flower: flower?.flower || "",
+        amount,
+      };
+    });
+    
+    // Check if any flowers are selected
+    if (items.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one flower for the order",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     updateOrderMutation.mutate({
       id: editOrder.id, 
       data: {
-        from: formData.from,
-        to: formData.to,
-        address: formData.address,
-        dateTime: dateTime.toISOString(),
-        notes: formData.notes || null,
+        order: {
+          from: formData.from,
+          to: formData.to,
+          address: formData.address,
+          dateTime: dateTime.toISOString(),
+          notes: formData.notes || null,
+        },
+        items,
       }
     });
   };
@@ -428,6 +493,42 @@ export default function ActiveOrders() {
                   onChange={handleInputChange}
                   rows={3}
                 />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Select Flowers</Label>
+                {isEditItemsLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ) : (
+                  <FlowerSelector
+                    flowers={flowers}
+                    selectedFlowers={selectedFlowers}
+                    onSelectFlower={handleSelectFlower}
+                  />
+                )}
+                {selectedFlowers.size > 0 && (
+                  <Card className="mt-4">
+                    <CardContent className="p-4">
+                      <h4 className="text-sm font-medium mb-2">Selected Flowers</h4>
+                      <ul className="space-y-2">
+                        {Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
+                          const flower = flowers.find(f => f.id === flowerId);
+                          return (
+                            <li key={flowerId} className="text-sm">
+                              <div className="flex justify-between">
+                                <span>{flower?.flower}</span>
+                                <span>{amount} pcs</span>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
               
               <DialogFooter className="pt-4">
