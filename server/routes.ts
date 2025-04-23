@@ -197,7 +197,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const createOrderSchema = z.object({
-    order: insertOrderSchema,
+    order: insertOrderSchema.extend({
+      dateTime: z.string().transform(val => new Date(val)),
+    }),
     items: z.array(insertOrderItemSchema.omit({ orderId: true })),
   });
 
@@ -249,7 +251,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/orders/:id', async (req: Request, res: Response) => {
     try {
-      const validatedData = insertOrderSchema.partial().parse(req.body);
+      const validatedData = insertOrderSchema.partial().extend({
+        dateTime: z.string().transform(val => new Date(val)).optional(),
+      }).parse(req.body);
       const updatedOrder = await storage.updateOrder(Number(req.params.id), validatedData);
       
       if (!updatedOrder) {
