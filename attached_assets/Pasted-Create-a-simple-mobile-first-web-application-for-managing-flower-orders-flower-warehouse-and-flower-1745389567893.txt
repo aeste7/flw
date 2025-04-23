@@ -1,0 +1,25 @@
+Create a simple mobile-first web application for managing flower orders, flower warehouse and flower delivery. 
+
+The backend will have database with 
+table"ORDERS" (ID, BOUQUET, FROM, TO, DATE_TIME, NOTES, STATUS),
+table "WAREHOUSE" (ID, FLOWER, AMOUNT, DATE_TIME),
+table "WRITEOFFS" (ID, FLOWER, AMOUNT, DATE_TIME).
+
+
+Possible status values are "New", "Assembled", "Sent", "Finished", "Deleted".
+
+It will be a main screen with menu buttons "new order", "active orders", "warehouse", "notes" and "write-off". 
+Every button will open a new screen.
+
+"New order"  should let to pick various number of flowers from avaliable in warehouse, and set names and addresses for sender and delivery, also there have to be a "notes" area and date and time picking control.
+
+"Active orders" will have two tabs : "orders" and "delivery". The "orders" tab will display a list of ordered dates from current to the future, with a sublist of orders (like "Order #13") for given date, ordered by time.  A click on any of the orders should show it's context menu with items "order assembled", "view", "edit", "send to delivery" and "remove". Click on "Order assembled" should change order status to "assembled" and assembled orders items should have yellow background. Click on "view" should open a screen with full order data. Click on "Edit" should Open a screen the same as "New order" but filled with actual order data and possibility to edit it. Click on "Send to delivery" will set order status to "SENT" and that order should disappear from tab "orders" and should appear on "delivery" tab. Click "Remove" will delete that order from the "Orders" list.
+"Delivery" tab should display the list of orders that has "SENT" and "DELIVERED" statuses. A click on a item should show it's context menu with items "Mark as delivered" and "Remove". 
+
+The "Warehouse" screen should have be a button "Add Flowers", a click on which should show a form with inputs "FLOWER" and "AMOUNT" and "ADD" button - the click will add a record to a "warehouse" table.
+
+The "warehouse" screen should display a list of avaliable flowers and it's amount(like "Roses, 13").  A click on any of the items should show it's context menu with items "Edit", "Add", "Write-Off", "Write-Off All". "Edit" will show the form similar to "Add flowers" prefilled with actual data for that record. "Add" will show a form with input to be added to the amount of the flowers for the record. 
+"Write-Off" will let to pick a flower and its amount to write-off - "Warehouse" will be deducted flowers amount and it will be added to "Writeoffs" table.
+
+
+A "notes" button should open a screen where the list of notes should be listed can be added, edited and deleted. 
