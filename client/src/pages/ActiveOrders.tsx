@@ -22,6 +22,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import FlowerSelector from "@/components/FlowerSelector";
+import { Checkbox } from "@/components/ui/checkbox"; 
 
 export default function ActiveOrders() {
   const { toast } = useToast();
@@ -31,6 +32,7 @@ export default function ActiveOrders() {
   const tabFromUrl = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabFromUrl || "orders");
   const [, navigate] = useLocation();
+  const [showFinishedOrders, setShowFinishedOrders] = useState(false);
   
   // State for view and edit dialogs
   const [viewOrder, setViewOrder] = useState<Order | null>(null);
@@ -73,17 +75,54 @@ export default function ActiveOrders() {
   useEffect(() => {
     navigate(`/active-orders${activeTab !== "orders" ? `?tab=${activeTab}` : ""}`, { replace: true });
   }, [activeTab, navigate]);
-  
-  // Query for orders
+
+
+
+    
+    
+  // Then, define your queries
   const { data: orders = [], isLoading } = useQuery<Order[]>({
     queryKey: ['/api/orders'],
   });
-  
+
   // Query for order items when viewing
   const { data: orderItems = [], isLoading: isItemsLoading } = useQuery<OrderItemType[]>({
     queryKey: ['/api/orders', viewOrder?.id, 'items'],
+    queryFn: async () => {
+      if (!viewOrder) return [];
+      try {
+        // Make the API request
+        const response = await fetch(`/api/orders/${viewOrder.id}/items`);
+        console.log("API Response for items:", response);
+        
+        // Check if the response is ok
+        if (!response.ok) {
+          throw new Error(`API request failed with status ${response.status}`);
+        }
+        
+        // Parse the response as JSON
+        const data = await response.json();
+        console.log("Parsed response data:", data);
+        
+        // Ensure the data is an array
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.error("Error fetching order items:", error);
+        return [];
+      }
+    },
     enabled: !!viewOrder,
   });
+  
+
+  // Now you can use useEffect with orderItems
+  useEffect(() => {
+    if (orderItems) {
+      console.log("Order items type:", typeof orderItems);
+      console.log("Order items value:", orderItems);
+    }
+  }, [orderItems]);
+    
   
   // Query for order items when editing
   const { data: editOrderItems = [], isLoading: isEditItemsLoading } = useQuery<OrderItemType[]>({
@@ -146,16 +185,37 @@ export default function ActiveOrders() {
     }
   });
   
-  // Filter orders based on tab
+  // Add debugging to check orders data
+  useEffect(() => {
+    if (orders.length > 0) {
+      console.log("All orders:", orders);
+      console.log("Orders with New status:", orders.filter(o => o.status === OrderStatus.New));
+      console.log("Orders with Assembled status:", orders.filter(o => o.status === OrderStatus.Assembled));
+    }
+  }, [orders]);
+
+  // Make sure the filter logic is correct
   const filteredOrders = orders.filter(order => {
+    // Add debugging
+    console.log(`Filtering order #${order.id} with status ${order.status} for tab ${activeTab}`);
+    
     if (activeTab === "orders") {
       return order.status === OrderStatus.New || order.status === OrderStatus.Assembled;
     } else if (activeTab === "delivery") {
-      return order.status === OrderStatus.Sent || order.status === OrderStatus.Finished;
+      if (showFinishedOrders) {
+        return order.status === OrderStatus.Sent || order.status === OrderStatus.Finished;
+      } else {
+        return order.status === OrderStatus.Sent;
+      }
     }
     return false;
   });
-  
+
+  // Log the filtered results
+  useEffect(() => {
+    console.log("Filtered orders:", filteredOrders);
+  }, [filteredOrders]);
+
   // Group orders by date
   const groupOrdersByDate = (orders: Order[]) => {
     if (orders.length === 0) return {};
@@ -324,6 +384,21 @@ export default function ActiveOrders() {
         
         {/* Delivery Tab Content */}
         <TabsContent value="delivery" className="p-4">
+          {/* Add the checkbox for showing finished orders */}
+          <div className="flex items-center space-x-2 mb-4">
+            <Checkbox 
+              id="showFinishedOrders" 
+              checked={showFinishedOrders}
+              onCheckedChange={(checked) => setShowFinishedOrders(checked === true)}
+            />
+            <Label 
+              htmlFor="showFinishedOrders" 
+              className="text-sm font-medium cursor-pointer"
+            >
+              Show finished orders
+            </Label>
+          </div>
+          
           {isLoading ? (
             // Loading skeleton
             Array(2).fill(0).map((_, i) => (
@@ -400,7 +475,7 @@ export default function ActiveOrders() {
                       <Skeleton className="h-8 w-full" />
                       <Skeleton className="h-8 w-full" />
                     </div>
-                  ) : orderItems.length === 0 ? (
+                  ) : !Array.isArray(orderItems) || orderItems.length === 0 ? (
                     <p className="text-sm text-gray-500">No flowers added to this order.</p>
                   ) : (
                     <ul className="space-y-2">
@@ -415,6 +490,10 @@ export default function ActiveOrders() {
                     </ul>
                   )}
                 </div>
+
+
+                
+
               </div>
             </div>
           )}
