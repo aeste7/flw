@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import FlowerSelector from "@/components/FlowerSelector";
 import { Checkbox } from "@/components/ui/checkbox"; 
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function ActiveOrders() {
   const { toast } = useToast();
@@ -39,6 +40,8 @@ export default function ActiveOrders() {
   const [editOrder, setEditOrder] = useState<Order | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [deleteOrderId, setDeleteOrderId] = useState<number | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedFlowers, setSelectedFlowers] = useState<Map<number, number>>(new Map());
   
   // Form state for editing
@@ -184,6 +187,42 @@ export default function ActiveOrders() {
       console.error("Error updating order:", error);
     }
   });
+
+  // Add delete order mutation
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (orderId: number) => {
+      return await apiRequest('DELETE', `/api/orders/${orderId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      toast({
+        title: "Order deleted",
+        description: "The order has been deleted successfully.",
+      });
+      setIsDeleteDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete order. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Error deleting order:", error);
+    }
+  });
+  
+  // Handle delete confirmation
+  const handleDeleteConfirm = () => {
+    if (deleteOrderId) {
+      deleteOrderMutation.mutate(deleteOrderId);
+    }
+  };
+  
+  // Handle delete click
+  const handleDeleteClick = (orderId: number) => {
+    setDeleteOrderId(orderId);
+    setIsDeleteDialogOpen(true);
+  };
   
   // Add debugging to check orders data
   useEffect(() => {
@@ -220,9 +259,20 @@ export default function ActiveOrders() {
   const groupOrdersByDate = (orders: Order[]) => {
     if (orders.length === 0) return {};
     
-    // First, sort all orders by date (closest to future first)
+    // Sort orders based on the active tab
+    // For delivery tab: oldest to newest (ascending)
+    // For orders tab: closest to future first (ascending)
     const sortedOrders = [...orders].sort((a, b) => {
-      return new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime();
+      const dateA = new Date(a.dateTime).getTime();
+      const dateB = new Date(b.dateTime).getTime();
+      
+      // For delivery tab, sort from oldest to newest
+      if (activeTab === "delivery") {
+        return dateA - dateB; // Ascending order (oldest first)
+      }
+      
+      // For orders tab, keep the existing sort (closest to future first)
+      return dateA - dateB; // Already in ascending order
     });
     
     const groupedOrders: { [key: string]: Order[] } = {};
@@ -238,9 +288,20 @@ export default function ActiveOrders() {
       groupedOrders[dateKey].push(order);
     });
     
-    // Sort the date keys so most recent dates appear first
+    // Sort the date keys
+    // For delivery tab: oldest dates first
+    // For orders tab: closest dates first
     const sortedKeys = Object.keys(groupedOrders).sort((a, b) => {
-      return new Date(a).getTime() - new Date(b).getTime();
+      const dateA = new Date(a).getTime();
+      const dateB = new Date(b).getTime();
+      
+      // For delivery tab, sort from oldest to newest
+      if (activeTab === "delivery") {
+        return dateB - dateA; // Ascending order (oldest first)
+      }
+      
+      // For orders tab, keep the existing sort (closest dates first)
+      return dateA - dateB; // Already in ascending order
     });
     
     // Create a new object with sorted keys
@@ -374,6 +435,7 @@ export default function ActiveOrders() {
                         setEditOrder(order);
                         setIsEditOpen(true);
                       }}
+                      onDelete={() => handleDeleteClick(order.id)} 
                     />
                   ))}
                 </div>
@@ -421,6 +483,7 @@ export default function ActiveOrders() {
                     setViewOrder(order);
                     setIsViewOpen(true);
                   }}
+                  onDelete={() => handleDeleteClick(order.id)} 
                 />
               ))}
             </div>
@@ -630,6 +693,29 @@ export default function ActiveOrders() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Order</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this order? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteOrderMutation.isPending}
+            >
+              {deleteOrderMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </section>
   );
 }

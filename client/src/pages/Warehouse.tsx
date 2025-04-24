@@ -58,7 +58,7 @@ export default function Warehouse() {
   });
   
   // Query for writeoffs
-  const { data: writeoffs = [], isLoading: isWriteoffsLoading } = useQuery<WriteoffType[]>({
+  const { data: writeoffs = [], isLoading: isWriteoffsLoading, refetch } = useQuery<WriteoffType[]>({
     queryKey: ['/api/writeoffs'],
   });
   
@@ -154,6 +154,36 @@ export default function Warehouse() {
     }
   });
 
+
+  
+  const clearWriteoffsMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('DELETE', '/api/writeoffs');
+    },
+    onSuccess: async (data) => {
+      console.log("Clear writeoffs success:", data);
+      // Try multiple approaches to ensure the UI updates
+      queryClient.invalidateQueries({ queryKey: ['/api/writeoffs'] });
+      queryClient.refetchQueries({ queryKey: ['/api/writeoffs'] });
+      await refetch(); // Directly refetch the data
+      setShowClearConfirm(false);
+      toast({
+        title: "Success",
+        description: "Write-off history has been cleared.",
+      });
+    },
+    onError: (error) => {
+      console.error("Clear writeoffs error:", error);
+      toast({
+        title: "Error",
+        description: `Failed to clear history: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  
+
   // Format date for display
   const formatDate = (dateTime: string | Date) => {
     const date = typeof dateTime === 'string' ? new Date(dateTime) : dateTime;
@@ -246,19 +276,16 @@ export default function Warehouse() {
                   <AlertDialogAction
                     className="bg-red-600 hover:bg-red-700"
                     onClick={() => {
-                      // In a real app, you'd call an API to clear history
-                      toast({
-                        title: "Not Implemented",
-                        description: "This feature is not yet implemented.",
-                      });
-                      setShowClearConfirm(false);
+                      clearWriteoffsMutation.mutate();
                     }}
+                    disabled={clearWriteoffsMutation.isPending}
                   >
-                    Delete
+                    {clearWriteoffsMutation.isPending ? "Deleting..." : "Delete"}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+
           </div>
           
           {isWriteoffsLoading ? (

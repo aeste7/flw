@@ -12,9 +12,10 @@ interface OrderItemProps {
   order: Order;
   onView?: () => void;
   onEdit?: () => void;
+  onDelete?: () => void; 
 }
 
-export default function OrderItem({ order, onView, onEdit }: OrderItemProps) {
+export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItemProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -86,7 +87,7 @@ export default function OrderItem({ order, onView, onEdit }: OrderItemProps) {
   
   const formatDateTime = (dateString: string | Date) => {
     const date = new Date(dateString);
-    return format(date, "h:mm a");
+    return format(date, "MMM d, yyyy 'at' h:mm a");
   };
   
   return (
@@ -109,7 +110,7 @@ export default function OrderItem({ order, onView, onEdit }: OrderItemProps) {
             <span>{order.to}</span>
           </div>
           <div className="flex">
-            <span className="text-gray-500 w-16">Time:</span>
+            <span className="text-gray-500 w-16">Date:</span>
             <span>{formatDateTime(order.dateTime)}</span>
           </div>
           {(order.status === OrderStatus.Sent || order.status === OrderStatus.Finished) && (
@@ -155,6 +156,8 @@ export default function OrderItem({ order, onView, onEdit }: OrderItemProps) {
                 Edit
               </Button>
             )}
+
+
           </>
         )}
         
@@ -181,6 +184,18 @@ export default function OrderItem({ order, onView, onEdit }: OrderItemProps) {
             Mark as Delivered
           </Button>
         )}
+
+        {onDelete && (
+          <Button 
+            variant="link" 
+            size="sm" 
+            className="text-red-600 hover:text-red-800"
+            onClick={onDelete}
+          >
+            Delete
+          </Button>
+        )}
+        
       </CardFooter>
     </Card>
   );

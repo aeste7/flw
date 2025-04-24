@@ -312,6 +312,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add a new endpoint to delete all writeoffs
+  app.delete('/api/writeoffs', async (req: Request, res: Response) => {
+    try {
+      console.log("Clearing writeoffs...");
+      const success = await storage.clearWriteoffs();
+      console.log("Writeoffs cleared:", success);
+      return res.json({ success });
+    } catch (error) {
+      console.error('Error clearing writeoffs:', error);
+      return res.status(500).json({ message: 'Failed to clear writeoffs' });
+    }
+  });
+  
+
+
   const httpServer = createServer(app);
   return httpServer;
 }

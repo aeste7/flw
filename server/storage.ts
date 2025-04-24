@@ -26,6 +26,7 @@ export interface IStorage {
   // Writeoffs methods
   getWriteoffs(): Promise<Writeoff[]>;
   addWriteoff(writeoff: InsertWriteoff): Promise<Writeoff>;
+  clearWriteoffs(): Promise<boolean>;
 
   // Notes methods
   getNotes(): Promise<Note[]>;
@@ -194,6 +195,12 @@ export class MemStorage implements IStorage {
     }
     
     return writeoff;
+  }
+  
+  // Clear all writeoffs history
+  async clearWriteoffs(): Promise<boolean> {
+    this.writeoffs = new Map();
+    return true;
   }
 
   // Notes methods
@@ -460,6 +467,16 @@ export class DatabaseStorage implements IStorage {
     return writeoff;
   }
 
+  async clearWriteoffs(): Promise<boolean> {
+    try {
+      await db.delete(writeoffsTable).execute();
+      return true;
+    } catch (error) {
+      console.error("Error clearing writeoffs:", error);
+      throw error;
+    }
+  }
+  
   // Notes methods
   async getNotes(): Promise<Note[]> {
     return await db.select().from(notesTable).orderBy(desc(notesTable.dateTime));
