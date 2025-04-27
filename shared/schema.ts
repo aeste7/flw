@@ -4,10 +4,10 @@ import { z } from "zod";
 
 // Enums for order status
 export const OrderStatus = {
-  New: "New",
-  Assembled: "Assembled",
-  Sent: "Sent",
-  Finished: "Finished",
+  New: "Новый",
+  Assembled: "Собран",
+  Sent: "В доставке",
+  Finished: "Доставлен",
   Deleted: "Deleted",
 } as const;
 
