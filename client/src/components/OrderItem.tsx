@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 
 interface OrderItemProps {
   order: Order;
@@ -18,6 +19,7 @@ interface OrderItemProps {
 export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItemProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
@@ -89,6 +91,11 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
     const date = new Date(dateString);
     return format(date, "MMM d, yyyy 'at' h:mm a");
   };
+
+  const handleEdit = () => {
+    console.log("Navigating to edit page for order:", order.id);
+    navigate(`/edit-order/${order.id}`);
+  };
   
   return (
     <Card className={cn("overflow-hidden shadow-sm", getCardStyle())}>
@@ -151,7 +158,7 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
                 variant="link" 
                 size="sm" 
                 className="text-gray-600 hover:text-gray-800"
-                onClick={onEdit}
+                onClick={handleEdit}
               >
                 Edit
               </Button>

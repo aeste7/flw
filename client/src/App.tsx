@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import NewOrder from "@/pages/NewOrder";
+import EditOrder from "./pages/EditOrder";
 import ActiveOrders from "@/pages/ActiveOrders";
 import Warehouse from "@/pages/Warehouse";
 import Notes from "@/pages/Notes";
@@ -23,6 +24,7 @@ function Router() {
         <Route path="/warehouse" component={Warehouse} />
         <Route path="/notes" component={Notes} />
         <Route path="/write-off/:id" component={WriteOff} />
+        <Route path="/edit-order/:id" component={EditOrder} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
