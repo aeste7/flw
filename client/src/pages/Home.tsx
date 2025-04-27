@@ -19,10 +19,10 @@ export default function Home() {
   const sentOrders = orders.filter(order => order.status === OrderStatus.Sent).length;
   
   const menuItems = [
-    { name: "New Order", icon: <PlusCircle className="h-10 w-10 text-blue-500 mb-2" />, path: "/new-order" },
-    { name: "Active Orders", icon: <ListChecks className="h-10 w-10 text-amber-500 mb-2" />, path: "/active-orders" },
-    { name: "Warehouse", icon: <PackageOpen className="h-10 w-10 text-emerald-500 mb-2" />, path: "/warehouse" },
-    { name: "Notes", icon: <FileText className="h-10 w-10 text-indigo-500 mb-2" />, path: "/notes" },
+    { name: "Новый заказ", icon: <PlusCircle className="h-10 w-10 text-blue-500 mb-2" />, path: "/new-order" },
+    { name: "Активные заказы", icon: <ListChecks className="h-10 w-10 text-amber-500 mb-2" />, path: "/active-orders" },
+    { name: "Склад", icon: <PackageOpen className="h-10 w-10 text-emerald-500 mb-2" />, path: "/warehouse" },
+    { name: "Заметки", icon: <FileText className="h-10 w-10 text-indigo-500 mb-2" />, path: "/notes" },
   ];
   
   return (
@@ -43,7 +43,7 @@ export default function Home() {
       
       <Card className="bg-white rounded-lg shadow-sm border border-gray-200">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Today's Overview</CardTitle>
+          <CardTitle className="text-lg">На сегодня</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex justify-between items-center p-3 bg-blue-50 rounded-md border border-blue-100">
@@ -51,14 +51,14 @@ export default function Home() {
               <div className="bg-blue-500 h-8 w-8 rounded-full flex items-center justify-center text-white font-medium">
                 {newOrders}
               </div>
-              <span className="ml-3">New Orders</span>
+              <span className="ml-3">Новые заказы</span>
             </div>
             <Button 
               variant="link" 
               className="text-blue-600"
               onClick={() => navigate("/active-orders")}
             >
-              View
+              Просмотреть
             </Button>
           </div>
           
@@ -67,14 +67,14 @@ export default function Home() {
               <div className="bg-amber-500 h-8 w-8 rounded-full flex items-center justify-center text-white font-medium">
                 {assembledOrders}
               </div>
-              <span className="ml-3">Assembled Orders</span>
+              <span className="ml-3">Собранные заказы</span>
             </div>
             <Button 
               variant="link" 
               className="text-amber-600"
               onClick={() => navigate("/active-orders")}
             >
-              View
+              Просмотреть
             </Button>
           </div>
           
@@ -83,14 +83,14 @@ export default function Home() {
               <div className="bg-emerald-500 h-8 w-8 rounded-full flex items-center justify-center text-white font-medium">
                 {sentOrders}
               </div>
-              <span className="ml-3">Sent for Delivery</span>
+              <span className="ml-3">На доставке</span>
             </div>
             <Button 
               variant="link" 
               className="text-emerald-600"
               onClick={() => navigate("/active-orders?tab=delivery")}
             >
-              View
+              Просмотреть
             </Button>
           </div>
         </CardContent>

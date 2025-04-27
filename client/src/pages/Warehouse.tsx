@@ -64,9 +64,9 @@ export default function Warehouse() {
   
   // Form schema
   const formSchema = z.object({
-    flower: z.string().min(1, "Flower type is required"),
+    flower: z.string().min(1, "Укажите вид цветов"),
     flowerType: z.string().optional(),
-    amount: z.coerce.number().min(1, "Amount must be at least 1"),
+    amount: z.coerce.number().min(1, "Количество должно как минимум 1"),
   });
   
   // Form
@@ -90,14 +90,14 @@ export default function Warehouse() {
       form.reset();
       setIsAddingNewType(false);
       toast({
-        title: "Success",
-        description: "Flowers added to inventory",
+        title: "Добавление цветов",
+        description: "Цветы были успешно добавлены",
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: `Failed to add flowers: ${error.message}`,
+        title: "Ошибка",
+        description: `Ошибка добавления цветов: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -141,14 +141,14 @@ export default function Warehouse() {
       queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/writeoffs'] });
       toast({
-        title: "Success",
-        description: "Flowers written off successfully",
+        title: "Списание цветов",
+        description: "Цветы были успешно списаны",
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: `Failed to write off flowers: ${error.message}`,
+        title: "Ошибка",
+        description: `Не удалось списать цветы: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -168,15 +168,15 @@ export default function Warehouse() {
       await refetch(); // Directly refetch the data
       setShowClearConfirm(false);
       toast({
-        title: "Success",
-        description: "Write-off history has been cleared.",
+        title: "Очистка истории",
+        description: "История списаний была успешно очищена.",
       });
     },
     onError: (error) => {
       console.error("Clear writeoffs error:", error);
       toast({
-        title: "Error",
-        description: `Failed to clear history: ${error.message}`,
+        title: "Ошибка",
+        description: `Не удалось очистить историю списаний: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -206,19 +206,19 @@ export default function Warehouse() {
   return (
     <section className="max-w-3xl mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-medium">Flower Inventory</h2>
+        <h2 className="text-lg font-medium">Склад цветов</h2>
         <Button
           onClick={() => setShowAddFlowerModal(true)}
           className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white"
         >
-          Add Flowers
+          Добавить цветы
         </Button>
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-2 w-full rounded-none mb-4">
-          <TabsTrigger value="available">Available</TabsTrigger>
-          <TabsTrigger value="writeoff">Write Off</TabsTrigger>
+          <TabsTrigger value="available">Доступны</TabsTrigger>
+          <TabsTrigger value="writeoff">Списать</TabsTrigger>
         </TabsList>
         
         {/* Available Tab */}
@@ -239,7 +239,7 @@ export default function Warehouse() {
               ))
             ) : flowers.length === 0 ? (
               <div className="p-6 text-center text-gray-500">
-                No flowers in inventory. Add some flowers to get started.
+                Нет цвдоступных цветов. Добавьте новые цветы.
               </div>
             ) : (
               flowers.map(flower => (
@@ -252,7 +252,7 @@ export default function Warehouse() {
         {/* Write Off Tab */}
         <TabsContent value="writeoff" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-base font-medium">Write-Off History</h3>
+            <h3 className="text-base font-medium">История списания</h3>
             
             <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
               <AlertDialogTrigger asChild>
@@ -261,18 +261,18 @@ export default function Warehouse() {
                   className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
                   disabled={writeoffs.length === 0}
                 >
-                  Clear History
+                  Очистить историю
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogTitle>Подтверждение очистки</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will permanently delete the write-off history. This action cannot be undone.
+                    История списаний будет очищена. Подтвердите, пожалуйста.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>Отмена</AlertDialogCancel>
                   <AlertDialogAction
                     className="bg-red-600 hover:bg-red-700"
                     onClick={() => {
@@ -280,7 +280,7 @@ export default function Warehouse() {
                     }}
                     disabled={clearWriteoffsMutation.isPending}
                   >
-                    {clearWriteoffsMutation.isPending ? "Deleting..." : "Delete"}
+                    {clearWriteoffsMutation.isPending ? "Очистка..." : "Очистить"}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -297,7 +297,7 @@ export default function Warehouse() {
             </div>
           ) : writeoffs.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm p-6 text-center text-gray-500">
-              No write-off history to display.
+              История списаний пуста.
             </div>
           ) : (
             <div className="space-y-3">
@@ -325,7 +325,7 @@ export default function Warehouse() {
       <Dialog open={showAddFlowerModal} onOpenChange={setShowAddFlowerModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Flowers to Inventory</DialogTitle>
+            <DialogTitle>Добавить цветы</DialogTitle>
           </DialogHeader>
           
           <Form {...form}>
@@ -335,7 +335,7 @@ export default function Warehouse() {
                 name="flower"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Flower Type</FormLabel>
+                    <FormLabel>Вид цветов</FormLabel>
                     <Select
                       onValueChange={handleFlowerTypeChange}
                       defaultValue={field.value}
@@ -351,7 +351,7 @@ export default function Warehouse() {
                             {flower.flower}
                           </SelectItem>
                         ))}
-                        <SelectItem value="add_new">Add new type...</SelectItem>
+                        <SelectItem value="add_new">Добавить новый вид...</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -365,9 +365,9 @@ export default function Warehouse() {
                   name="flowerType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>New Flower Type</FormLabel>
+                      <FormLabel>Новый вид цветов</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter new flower type" {...field} />
+                        <Input placeholder="Введите новый вид" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -380,7 +380,7 @@ export default function Warehouse() {
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount</FormLabel>
+                    <FormLabel>Количество</FormLabel>
                     <FormControl>
                       <Input type="number" min={1} {...field} />
                     </FormControl>
@@ -395,7 +395,7 @@ export default function Warehouse() {
                   className="bg-emerald-600 hover:bg-emerald-700"
                   disabled={addFlowerMutation.isPending}
                 >
-                  Add to Inventory
+                  Добавить цветы
                 </Button>
               </DialogFooter>
             </form>

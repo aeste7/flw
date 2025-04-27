@@ -174,17 +174,17 @@ export default function ActiveOrders() {
       setIsEditOpen(false);
       setEditOrder(null);
       toast({
-        title: "Order updated",
-        description: "The order has been updated successfully.",
+        title: "Обновление заказа",
+        description: "Заказ бы успешно обновлён",
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: "Failed to update order. Please try again.",
+        title: "Ошибка",
+        description: "Не удалось обновить заказ. Пожалуйста, попробуйте снова.",
         variant: "destructive",
       });
-      console.error("Error updating order:", error);
+      console.error("Ошибка обновления заказа:", error);
     }
   });
 
@@ -196,18 +196,18 @@ export default function ActiveOrders() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       toast({
-        title: "Order deleted",
-        description: "The order has been deleted successfully.",
+        title: "Удаление заказа",
+        description: "Заказ бы успешно удалён",
       });
       setIsDeleteDialogOpen(false);
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: "Failed to delete order. Please try again.",
+        title: "Ошибка",
+        description: "Не удалось удалить заказ. Пожалуйста, попробуйте снова.",
         variant: "destructive",
       });
-      console.error("Error deleting order:", error);
+      console.error("Ошибка удаления заказа:", error);
     }
   });
   
@@ -227,16 +227,16 @@ export default function ActiveOrders() {
   // Add debugging to check orders data
   useEffect(() => {
     if (orders.length > 0) {
-      console.log("All orders:", orders);
-      console.log("Orders with New status:", orders.filter(o => o.status === OrderStatus.New));
-      console.log("Orders with Assembled status:", orders.filter(o => o.status === OrderStatus.Assembled));
+      console.log("Все заказы:", orders);
+      console.log("Заказы со статусом Новый:", orders.filter(o => o.status === OrderStatus.New));
+      console.log("Заказы со статусом Собран:", orders.filter(o => o.status === OrderStatus.Assembled));
     }
   }, [orders]);
 
   // Make sure the filter logic is correct
   const filteredOrders = orders.filter(order => {
     // Add debugging
-    console.log(`Filtering order #${order.id} with status ${order.status} for tab ${activeTab}`);
+    console.log(`Фильтруем заказ #${order.id} со статусом ${order.status} для вкладки ${activeTab}`);
     
     if (activeTab === "orders") {
       return order.status === OrderStatus.New || order.status === OrderStatus.Assembled;
@@ -252,7 +252,7 @@ export default function ActiveOrders() {
 
   // Log the filtered results
   useEffect(() => {
-    console.log("Filtered orders:", filteredOrders);
+    console.log("Отфильтрованные заказы:", filteredOrders);
   }, [filteredOrders]);
 
   // Group orders by date
@@ -361,8 +361,8 @@ export default function ActiveOrders() {
     // Check if any flowers are selected
     if (items.length === 0) {
       toast({
-        title: "Error",
-        description: "Please select at least one flower for the order",
+        title: "Ошибка",
+        description: "Пожалуйста, выберите хотя бы один цветок",
         variant: "destructive",
       });
       return;
@@ -394,8 +394,8 @@ export default function ActiveOrders() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-2 w-full rounded-none">
-          <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="delivery">Delivery</TabsTrigger>
+          <TabsTrigger value="orders">Заказы</TabsTrigger>
+          <TabsTrigger value="delivery">Доставка</TabsTrigger>
         </TabsList>
         
         {/* Orders Tab Content */}
@@ -413,7 +413,7 @@ export default function ActiveOrders() {
             ))
           ) : Object.keys(groupedOrders).length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">No orders found</p>
+              <p className="text-gray-500">Заказы не найдены</p>
             </div>
           ) : (
             Object.keys(groupedOrders).map(dateKey => (
@@ -457,7 +457,7 @@ export default function ActiveOrders() {
               htmlFor="showFinishedOrders" 
               className="text-sm font-medium cursor-pointer"
             >
-              Show finished orders
+              Показывать завершённые заказы
             </Label>
           </div>
           
@@ -471,7 +471,7 @@ export default function ActiveOrders() {
             ))
           ) : filteredOrders.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">No deliveries found</p>
+              <p className="text-gray-500">Доставки не найдены</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -495,9 +495,9 @@ export default function ActiveOrders() {
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Order Details</DialogTitle>
+            <DialogTitle>Детали заказа</DialogTitle>
             <DialogDescription>
-              View order information and flower details.
+              Посмотреть детали заказа
             </DialogDescription>
           </DialogHeader>
           
@@ -505,26 +505,26 @@ export default function ActiveOrders() {
             <div className="py-4">
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-sm font-medium mb-1">Order #{viewOrder.id}</h4>
+                  <h4 className="text-sm font-medium mb-1">Заказ №{viewOrder.id}</h4>
                   <div className="grid grid-cols-[80px_1fr] gap-1 text-sm">
-                    <span className="text-gray-500">Status:</span>
+                    <span className="text-gray-500">Статус:</span>
                     <span>{viewOrder.status}</span>
                     
-                    <span className="text-gray-500">From:</span>
+                    <span className="text-gray-500">От:</span>
                     <span>{viewOrder.from}</span>
                     
-                    <span className="text-gray-500">To:</span>
+                    <span className="text-gray-500">К:</span>
                     <span>{viewOrder.to}</span>
                     
-                    <span className="text-gray-500">Address:</span>
+                    <span className="text-gray-500">Адрес:</span>
                     <span>{viewOrder.address}</span>
                     
-                    <span className="text-gray-500">Date:</span>
+                    <span className="text-gray-500">Дата:</span>
                     <span>{formatDateTime(viewOrder.dateTime)}</span>
                     
                     {viewOrder.notes && (
                       <>
-                        <span className="text-gray-500">Notes:</span>
+                        <span className="text-gray-500">Заметки:</span>
                         <span>{viewOrder.notes}</span>
                       </>
                     )}
@@ -532,14 +532,14 @@ export default function ActiveOrders() {
                 </div>
                 
                 <div>
-                  <h4 className="text-sm font-medium mb-2">Flowers</h4>
+                  <h4 className="text-sm font-medium mb-2">Цветы</h4>
                   {isItemsLoading ? (
                     <div className="space-y-2">
                       <Skeleton className="h-8 w-full" />
                       <Skeleton className="h-8 w-full" />
                     </div>
                   ) : !Array.isArray(orderItems) || orderItems.length === 0 ? (
-                    <p className="text-sm text-gray-500">No flowers added to this order.</p>
+                    <p className="text-sm text-gray-500">В заказе нет цветов.</p>
                   ) : (
                     <ul className="space-y-2">
                       {orderItems.map(item => (
@@ -563,7 +563,7 @@ export default function ActiveOrders() {
           
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsViewOpen(false)}>
-              Close
+              Закрыть
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -573,16 +573,16 @@ export default function ActiveOrders() {
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Edit Order</DialogTitle>
+            <DialogTitle>Редактировать заказ</DialogTitle>
             <DialogDescription>
-              Make changes to the order details.
+              Внести изменения в заказ
             </DialogDescription>
           </DialogHeader>
           
           {editOrder && (
             <form onSubmit={handleSubmit} className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="from">From</Label>
+                <Label htmlFor="from">От</Label>
                 <Input
                   id="from"
                   name="from"
@@ -593,7 +593,7 @@ export default function ActiveOrders() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="to">To</Label>
+                <Label htmlFor="to">К</Label>
                 <Input
                   id="to"
                   name="to"
@@ -604,7 +604,7 @@ export default function ActiveOrders() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
+                <Label htmlFor="address">Адрес</Label>
                 <Input
                   id="address"
                   name="address"
@@ -615,7 +615,7 @@ export default function ActiveOrders() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="dateTime">Date and Time</Label>
+                <Label htmlFor="dateTime">Дата и время</Label>
                 <Input
                   id="dateTime"
                   name="dateTime"
@@ -627,7 +627,7 @@ export default function ActiveOrders() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
+                <Label htmlFor="notes">Заметки</Label>
                 <Textarea
                   id="notes"
                   name="notes"
@@ -638,7 +638,7 @@ export default function ActiveOrders() {
               </div>
               
               <div className="space-y-2">
-                <Label>Select Flowers</Label>
+                <Label>Выберите цветы</Label>
                 {isEditItemsLoading ? (
                   <div className="space-y-2">
                     <Skeleton className="h-10 w-full" />
@@ -654,7 +654,7 @@ export default function ActiveOrders() {
                 {selectedFlowers.size > 0 && (
                   <Card className="mt-4">
                     <CardContent className="p-4">
-                      <h4 className="text-sm font-medium mb-2">Selected Flowers</h4>
+                      <h4 className="text-sm font-medium mb-2">Выбранные цветы</h4>
                       <ul className="space-y-2">
                         {Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
                           const flower = flowers.find(f => f.id === flowerId);
@@ -680,13 +680,13 @@ export default function ActiveOrders() {
                   onClick={() => setIsEditOpen(false)}
                   disabled={updateOrderMutation.isPending}
                 >
-                  Cancel
+                  Отмена
                 </Button>
                 <Button 
                   type="submit"
                   disabled={updateOrderMutation.isPending}
                 >
-                  {updateOrderMutation.isPending ? "Saving..." : "Save Changes"}
+                  {updateOrderMutation.isPending ? "Сохранение..." : "Применить изменения"}
                 </Button>
               </DialogFooter>
             </form>
@@ -698,19 +698,19 @@ export default function ActiveOrders() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Order</AlertDialogTitle>
+            <AlertDialogTitle>Удалить заказ</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this order? This action cannot be undone.
+              Подтвердите, пожалуйста, удаление заказа.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDeleteConfirm}
               className="bg-red-600 hover:bg-red-700"
               disabled={deleteOrderMutation.isPending}
             >
-              {deleteOrderMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteOrderMutation.isPending ? "Удаление..." : "Удалить"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

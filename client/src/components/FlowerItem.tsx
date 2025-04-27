@@ -30,13 +30,13 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
   
   // Form schema for editing flower
   const editFormSchema = z.object({
-    flower: z.string().min(1, "Flower name is required"),
-    amount: z.coerce.number().min(0, "Amount must be at least 0"),
+    flower: z.string().min(1, "Укажите название цветка"),
+    amount: z.coerce.number().min(0, "Количество должно быть не менее 0"),
   });
   
   // Form schema for adding more flowers
   const addFormSchema = z.object({
-    amount: z.coerce.number().min(1, "Amount must be at least 1"),
+    amount: z.coerce.number().min(1, "Количество должно быть как минимум, 1"),
   });
   
   // Form for editing
@@ -70,14 +70,14 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
       setShowEditModal(false);
       toast({
-        title: "Success",
-        description: "Flower updated successfully",
+        title: "Успешно",
+        description: "Информация была обновлена",
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: `Failed to update flower: ${error.message}`,
+        title: "Ошибка",
+        description: `Не удалось обновить информацию: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -94,14 +94,14 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
       setShowAddModal(false);
       toast({
-        title: "Success",
-        description: "Flowers added successfully",
+        title: "Успешно",
+        description: "Цветы были добавлены",
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: `Failed to add flowers: ${error.message}`,
+        title: "Ошибка",
+        description: `Не удалось добавить цветы: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -135,14 +135,14 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/writeoffs'] });
       setShowContextMenu(false);
       toast({
-        title: "Success",
-        description: "Flowers written off successfully",
+        title: "Успешно",
+        description: "Цветы были списаны",
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: `Failed to write off flowers: ${error.message}`,
+        title: "Ошибка",
+        description: `не удалось списать цветы: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -186,7 +186,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
       <div className="p-4 flex justify-between items-center hover:bg-gray-50">
         <div>
           <h3 className="font-medium">{flower.flower}</h3>
-          <p className="text-sm text-gray-500">Last updated: {formatDate(flower.dateTime)}</p>
+          <p className="text-sm text-gray-500">Обновлено: {formatDate(flower.dateTime)}</p>
         </div>
         <div className="flex items-center">
           <span className="text-lg font-semibold mr-3">{flower.amount}</span>
@@ -218,7 +218,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
               }}
             >
               <Edit className="h-5 w-5 text-gray-400 mr-3" />
-              <span>Edit</span>
+              <span>Редактировать</span>
             </Button>
             
             <Button 
@@ -230,7 +230,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
               }}
             >
               <Plus className="h-5 w-5 text-gray-400 mr-3" />
-              <span>Add More</span>
+              <span>Добавить</span>
             </Button>
             
             <Button 
@@ -240,7 +240,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
               disabled={flower.amount === 0 || writeoffMutation.isPending}
             >
               <Trash className="h-5 w-5 text-gray-400 mr-3" />
-              <span>Write-Off</span>
+              <span>Списать</span>
             </Button>
             
             <Button 
@@ -250,7 +250,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
               disabled={flower.amount === 0 || writeoffMutation.isPending}
             >
               <Trash2 className="h-5 w-5 text-red-500 mr-3" />
-              <span>Write-Off All</span>
+              <span>Списать всё</span>
             </Button>
           </div>
           
@@ -260,7 +260,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
               className="w-full text-center text-gray-500 font-medium"
               onClick={() => setShowContextMenu(false)}
             >
-              Cancel
+              Отмена
             </Button>
           </div>
         </DialogContent>
@@ -270,7 +270,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Flower</DialogTitle>
+            <DialogTitle>Редактировать цветы</DialogTitle>
           </DialogHeader>
           
           <Form {...editForm}>
@@ -280,7 +280,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
                 name="flower"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Flower Type</FormLabel>
+                    <FormLabel>Вид цветка</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -294,7 +294,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount</FormLabel>
+                    <FormLabel>Количество</FormLabel>
                     <FormControl>
                       <Input type="number" min={0} {...field} />
                     </FormControl>
@@ -305,7 +305,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
               
               <DialogFooter>
                 <Button type="submit" disabled={updateFlowerMutation.isPending}>
-                  Save Changes
+                  Сохранить изменения
                 </Button>
               </DialogFooter>
             </form>
@@ -317,13 +317,13 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add More Flowers</DialogTitle>
+            <DialogTitle>Добавить цветы</DialogTitle>
           </DialogHeader>
           
           <Form {...addForm}>
             <form onSubmit={addForm.handleSubmit(onSubmitAdd)} className="space-y-4">
               <div>
-                <Label>Flower Type</Label>
+                <Label>Вид цветов</Label>
                 <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
                   {flower.flower}
                 </div>
@@ -334,7 +334,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount to Add</FormLabel>
+                    <FormLabel>Добавить количество</FormLabel>
                     <FormControl>
                       <Input type="number" min={1} {...field} />
                     </FormControl>
@@ -345,7 +345,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
               
               <DialogFooter>
                 <Button type="submit" disabled={addFlowersMutation.isPending}>
-                  Add to Inventory
+                  Добавить на склад
                 </Button>
               </DialogFooter>
             </form>
@@ -357,22 +357,22 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
       <Dialog open={showWriteOffModal} onOpenChange={setShowWriteOffModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Write-Off Flowers</DialogTitle>
+            <DialogTitle>Списание цветов</DialogTitle>
             <DialogDescription>
-              Specify the amount of flowers to write off from inventory.
+              Укажите количество для списания.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             <div>
-              <Label>Flower Type</Label>
+              <Label>Вид цветов</Label>
               <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
                 {flower.flower}
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="writeOffAmount">Amount to Write-Off</Label>
+              <Label htmlFor="writeOffAmount">Количество к списанию</Label>
               <div className="flex items-center space-x-2">
                 <Input 
                   id="writeOffAmount"
@@ -384,11 +384,11 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
                   className="flex-1"
                 />
                 <span className="text-sm text-gray-500">
-                  / {flower.amount} available
+                  / {flower.amount} доступно
                 </span>
               </div>
               {writeOffAmount > flower.amount && (
-                <p className="text-sm text-red-500">Cannot write off more than available amount</p>
+                <p className="text-sm text-red-500">Невозможно списать более, чем доступно</p>
               )}
             </div>
             
@@ -404,7 +404,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
                 onClick={handleWriteOffSubmit}
                 disabled={writeOffAmount <= 0 || writeOffAmount > flower.amount || writeoffMutation.isPending}
               >
-                {writeoffMutation.isPending ? "Processing..." : "Write-Off"}
+                {writeoffMutation.isPending ? "Обработка..." : "Списать"}
               </Button>
             </DialogFooter>
           </div>

@@ -5,11 +5,11 @@ export default function BottomNavigation() {
   const [, navigate] = useLocation();
   
   const navItems = [
-    { name: "Home", icon: <Home className="h-6 w-6" />, path: "/" },
-    { name: "New Order", icon: <PlusCircle className="h-6 w-6" />, path: "/new-order" },
-    { name: "Orders", icon: <ListChecks className="h-6 w-6" />, path: "/active-orders" },
-    { name: "Warehouse", icon: <PackageOpen className="h-6 w-6" />, path: "/warehouse" },
-    { name: "Notes", icon: <FileText className="h-6 w-6" />, path: "/notes" },
+    { name: "Домашняя", icon: <Home className="h-6 w-6" />, path: "/" },
+    { name: "Новый заказ", icon: <PlusCircle className="h-6 w-6" />, path: "/new-order" },
+    { name: "Активные заказы", icon: <ListChecks className="h-6 w-6" />, path: "/active-orders" },
+    { name: "Склад", icon: <PackageOpen className="h-6 w-6" />, path: "/warehouse" },
+    { name: "Заметки", icon: <FileText className="h-6 w-6" />, path: "/notes" },
   ];
   
   return (

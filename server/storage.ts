@@ -83,12 +83,15 @@ export class MemStorage implements IStorage {
 
   private initSampleData() {
     // Add some sample flowers to warehouse
-    this.addFlowers({ flower: "Red Roses", amount: 24 });
-    this.addFlowers({ flower: "White Lilies", amount: 18 });
-    this.addFlowers({ flower: "Pink Carnations", amount: 30 });
-    this.addFlowers({ flower: "Yellow Tulips", amount: 15 });
+    /*
+    this.addFlowers({ flower: "Роза красная", amount: 24 });
+    this.addFlowers({ flower: "Лилия белая", amount: 18 });
+    this.addFlowers({ flower: "Пион розовый", amount: 30 });
+    his.addFlowers({ flower: "Тюльпан жёлтый", amount: 15 });
+    */
     
     // Add some sample notes
+    /*
     this.addNote({ 
       title: "Weekly Supplier Meeting", 
       content: "Meeting with rose supplier scheduled for Friday at 2pm. Need to discuss increased orders for upcoming wedding season." 
@@ -97,6 +100,7 @@ export class MemStorage implements IStorage {
       title: "Store Closing Early", 
       content: "The store will be closing at 4pm next Monday for staff training. Ensure all deliveries are scheduled before 3pm." 
     });
+    */
   }
 
   // User methods

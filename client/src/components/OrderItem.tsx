@@ -28,14 +28,14 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       toast({
-        title: "Order Updated",
-        description: `Order #${order.id} status updated successfully`,
+        title: "Обновление заказа",
+        description: `Статус заказа №${order.id} был успешно обновлён`,
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: `Failed to update order: ${error.message}`,
+        title: "Ошибка",
+        description: `Не удалось обновить заказ: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -102,27 +102,27 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
       <CardContent className="p-4">
         <div className="flex justify-between items-start">
           <div>
-            <h4 className="font-medium">Order #{order.id}</h4>
+            <h4 className="font-medium">Заказ №{order.id}</h4>
           </div>
           <StatusBadge status={order.status as OrderStatus} />
         </div>
         
         <div className="mt-3 text-sm">
           <div className="flex">
-            <span className="text-gray-500 w-16">From:</span>
+            <span className="text-gray-500 w-16">От:</span>
             <span>{order.from}</span>
           </div>
           <div className="flex">
-            <span className="text-gray-500 w-16">To:</span>
+            <span className="text-gray-500 w-16">К:</span>
             <span>{order.to}</span>
           </div>
           <div className="flex">
-            <span className="text-gray-500 w-16">Date:</span>
+            <span className="text-gray-500 w-16">Дата:</span>
             <span>{formatDateTime(order.dateTime)}</span>
           </div>
           {(order.status === OrderStatus.Sent || order.status === OrderStatus.Finished) && (
             <div className="flex">
-              <span className="text-gray-500 w-16">Address:</span>
+              <span className="text-gray-500 w-16">Адрес:</span>
               <span className="flex-1">{order.address}</span>
             </div>
           )}
@@ -137,7 +137,7 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
             className="text-blue-600 hover:text-blue-800"
             onClick={onView}
           >
-            View
+            Просмотреть
           </Button>
         )}
         
@@ -150,7 +150,7 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
               onClick={handleMarkAssembled}
               disabled={updateStatusMutation.isPending}
             >
-              Mark Assembled
+              Пометить как СОБРАН
             </Button>
             
             {onEdit && (
@@ -160,7 +160,7 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
                 className="text-gray-600 hover:text-gray-800"
                 onClick={handleEdit}
               >
-                Edit
+                Редактировать
               </Button>
             )}
 
@@ -176,7 +176,7 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
             onClick={handleSendToDelivery}
             disabled={updateStatusMutation.isPending}
           >
-            Send to Delivery
+            Отправить В ДОСТАВКУ
           </Button>
         )}
         
@@ -188,7 +188,7 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
             onClick={handleMarkDelivered}
             disabled={updateStatusMutation.isPending}
           >
-            Mark as Delivered
+            Пометить как ДОСТАВЛЕН
           </Button>
         )}
 
@@ -199,7 +199,7 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
             className="text-red-600 hover:text-red-800"
             onClick={onDelete}
           >
-            Delete
+            Удалить
           </Button>
         )}
         

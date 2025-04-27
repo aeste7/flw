@@ -30,7 +30,7 @@ export default function FlowerSelector({
     <div className="space-y-2 max-h-60 overflow-y-auto p-2 border border-gray-200 rounded-md bg-gray-50">
       {flowers.length === 0 ? (
         <div className="p-4 text-center text-gray-500">
-          No flowers available in inventory
+          Нет доступных цветов
         </div>
       ) : (
         flowers.map((flower) => (
@@ -41,7 +41,7 @@ export default function FlowerSelector({
             <div className="flex items-center">
               <span className="font-medium">{flower.flower}</span>
               <span className="ml-2 text-sm text-gray-500">
-                Available: {flower.amount}
+                Доступно: {flower.amount}
               </span>
             </div>
             <div className="flex items-center">

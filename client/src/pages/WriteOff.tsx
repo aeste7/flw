@@ -33,8 +33,8 @@ export default function WriteOff() {
   // Form schema
   const formSchema = z.object({
     amount: z.coerce.number()
-      .min(1, "Amount must be at least 1"),
-    reason: z.string().min(1, "Reason is required"),
+      .min(1, "Минимальное количество 1 штука"),
+    reason: z.string().min(1, "Укажите причину списания"),
   });
   
   // Form
@@ -57,7 +57,7 @@ export default function WriteOff() {
         formSchema.refine(
           data => data.amount <= maxAmount,
           {
-            message: `Cannot write off more than ${maxAmount} flowers`,
+            message: `Не возможно списать более чем ${maxAmount} цветов`,
             path: ['amount'],
           }
         )
@@ -81,15 +81,15 @@ export default function WriteOff() {
       queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/writeoffs'] });
       toast({
-        title: "Success",
-        description: "Flowers written off successfully",
+        title: "Списание цветов",
+        description: "Цветы были успешно списаны",
       });
       navigate("/warehouse");
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: `Failed to write off flowers: ${error.message}`,
+        title: "Ошибка",
+        description: `Не удалось списать цветы: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -103,7 +103,7 @@ export default function WriteOff() {
     if (values.amount > flower.amount) {
       form.setError("amount", {
         type: "manual",
-        message: `Cannot write off more than ${flower.amount} flowers`,
+        message: `Не возможно списать более чем ${flower.amount} цветов`,
       });
       return;
     }
@@ -116,7 +116,7 @@ export default function WriteOff() {
       <Card className="bg-white rounded-lg shadow-sm">
         <CardHeader>
           <CardTitle>
-            Write-Off {isLoading ? "Flowers" : `${flower?.flower}`}
+            Write-Off {isLoading ? "Цветов" : `${flower?.flower}`}
           </CardTitle>
         </CardHeader>
         
@@ -129,16 +129,16 @@ export default function WriteOff() {
             </div>
           ) : !flower ? (
             <div className="text-center py-4">
-              <p className="text-red-500">Flower not found</p>
+              <p className="text-red-500">цветы не найдены</p>
               <Button className="mt-4" onClick={() => navigate("/warehouse")}>
-                Return to Warehouse
+                Вернуть к складу
               </Button>
             </div>
           ) : (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <div>
-                  <Label>Current Amount</Label>
+                  <Label>Актуальное количество</Label>
                   <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
                     {flower.amount}
                   </div>
@@ -149,7 +149,7 @@ export default function WriteOff() {
                   name="amount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Amount to Write-Off</FormLabel>
+                      <FormLabel>Количество к списанию</FormLabel>
                       <FormControl>
                         <Input 
                           type="number" 
@@ -168,11 +168,11 @@ export default function WriteOff() {
                   name="reason"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Reason</FormLabel>
+                      <FormLabel>Причина</FormLabel>
                       <FormControl>
                         <Textarea 
                           rows={2} 
-                          placeholder="Enter reason for write-off"
+                          placeholder="Укажите причину списания"
                           {...field} 
                         />
                       </FormControl>
@@ -186,14 +186,14 @@ export default function WriteOff() {
                     variant="outline"
                     onClick={() => navigate("/warehouse")}
                   >
-                    Cancel
+                    Отмена
                   </Button>
                   <Button 
                     type="submit" 
                     variant="destructive"
                     disabled={writeOffMutation.isPending}
                   >
-                    Write-Off
+                    Списать
                   </Button>
                 </div>
               </form>

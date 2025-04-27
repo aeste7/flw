@@ -20,8 +20,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const flowers = await storage.getFlowers();
       return res.json(flowers);
     } catch (error) {
-      console.error('Error fetching flowers:', error);
-      return res.status(500).json({ message: 'Failed to fetch flowers' });
+      console.error('Ошибка при получении списка  цветов:', error);
+      return res.status(500).json({ message: 'Не удалось получить список цветов' });
     }
   });
 
@@ -29,12 +29,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const flower = await storage.getFlower(Number(req.params.id));
       if (!flower) {
-        return res.status(404).json({ message: 'Flower not found' });
+        return res.status(404).json({ message: 'Цветы не найдены' });
       }
       return res.json(flower);
     } catch (error) {
-      console.error('Error fetching flower:', error);
-      return res.status(500).json({ message: 'Failed to fetch flower' });
+      console.error('Ошибка при получении цветка:', error);
+      return res.status(500).json({ message: 'Не удалось получить данные по цветам' });
     }
   });
 
@@ -47,8 +47,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ errors: error.errors });
       }
-      console.error('Error adding flowers:', error);
-      return res.status(500).json({ message: 'Failed to add flowers' });
+      console.error('Ошибка при добавлении цветов:', error);
+      return res.status(500).json({ message: 'Не удалось добавить цветы' });
     }
   });
 
@@ -57,15 +57,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertWarehouseSchema.partial().parse(req.body);
       const updatedFlower = await storage.updateFlowers(Number(req.params.id), validatedData);
       if (!updatedFlower) {
-        return res.status(404).json({ message: 'Flower not found' });
+        return res.status(404).json({ message: 'Цветы не найдены' });
       }
       return res.json(updatedFlower);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ errors: error.errors });
       }
-      console.error('Error updating flower:', error);
-      return res.status(500).json({ message: 'Failed to update flower' });
+      console.error('Ошибка обновления цветов:', error);
+      return res.status(500).json({ message: 'Не удалось обновить цветы' });
     }
   });
 
@@ -75,8 +75,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const writeoffs = await storage.getWriteoffs();
       return res.json(writeoffs);
     } catch (error) {
-      console.error('Error fetching writeoffs:', error);
-      return res.status(500).json({ message: 'Failed to fetch writeoffs' });
+      console.error('Ошибка при получении списока списаний', error);
+      return res.status(500).json({ message: 'Не удалось получить список списаний' });
     }
   });
 
@@ -89,8 +89,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ errors: error.errors });
       }
-      console.error('Error adding writeoff:', error);
-      return res.status(500).json({ message: 'Failed to add writeoff' });
+      console.error('Ошибка при списании:', error);
+      return res.status(500).json({ message: 'Не удалось произвести списание' });
     }
   });
 
@@ -100,8 +100,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const notes = await storage.getNotes();
       return res.json(notes);
     } catch (error) {
-      console.error('Error fetching notes:', error);
-      return res.status(500).json({ message: 'Failed to fetch notes' });
+      console.error('Ошибка при получении списока заметок', error);
+      return res.status(500).json({ message: 'Не удалось получить список заметок' });
     }
   });
 
@@ -109,12 +109,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const note = await storage.getNote(Number(req.params.id));
       if (!note) {
-        return res.status(404).json({ message: 'Note not found' });
+        return res.status(404).json({ message: 'Заметка не найдена' });
       }
       return res.json(note);
     } catch (error) {
-      console.error('Error fetching note:', error);
-      return res.status(500).json({ message: 'Failed to fetch note' });
+      console.error('Ошибка при получении заметки', error);
+      return res.status(500).json({ message: 'Не удалось получить данные по заметке' });
     }
   });
 
@@ -127,8 +127,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ errors: error.errors });
       }
-      console.error('Error adding note:', error);
-      return res.status(500).json({ message: 'Failed to add note' });
+      console.error('Ошибка при добавлении заметки', error);
+      return res.status(500).json({ message: 'Не удалось добавить заметку' });
     }
   });
 
@@ -137,15 +137,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertNoteSchema.partial().parse(req.body);
       const updatedNote = await storage.updateNote(Number(req.params.id), validatedData);
       if (!updatedNote) {
-        return res.status(404).json({ message: 'Note not found' });
+        return res.status(404).json({ message: 'Заметка не найдена' });
       }
       return res.json(updatedNote);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ errors: error.errors });
       }
-      console.error('Error updating note:', error);
-      return res.status(500).json({ message: 'Failed to update note' });
+      console.error('Ошибка при обновлении заметки', error);
+      return res.status(500).json({ message: 'Не удалось обновить заметку' });
     }
   });
 
@@ -153,12 +153,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const success = await storage.deleteNote(Number(req.params.id));
       if (!success) {
-        return res.status(404).json({ message: 'Note not found' });
+        return res.status(404).json({ message: 'Заметка не найдена' });
       }
       return res.json({ success: true });
     } catch (error) {
       console.error('Error deleting note:', error);
-      return res.status(500).json({ message: 'Failed to delete note' });
+      return res.status(500).json({ message: 'Не удалось удалить заметку' });
     }
   });
 
@@ -168,8 +168,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orders = await storage.getOrders();
       return res.json(orders);
     } catch (error) {
-      console.error('Error fetching orders:', error);
-      return res.status(500).json({ message: 'Failed to fetch orders' });
+      console.error('Ошибка при получении списка заказов', error);
+      return res.status(500).json({ message: 'Не удалось получить список заказов' });
     }
   });
 
@@ -177,12 +177,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const order = await storage.getOrder(Number(req.params.id));
       if (!order) {
-        return res.status(404).json({ message: 'Order not found' });
+        return res.status(404).json({ message: 'Заказ не найден' });
       }
       return res.json(order);
     } catch (error) {
-      console.error('Error fetching order:', error);
-      return res.status(500).json({ message: 'Failed to fetch order' });
+      console.error('Ошибка при получении заказа', error);
+      return res.status(500).json({ message: 'Не удалось получить заказ' });
     }
   });
 
@@ -191,8 +191,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const items = await storage.getOrderItems(Number(req.params.id));
       return res.json(items);
     } catch (error) {
-      console.error('Error fetching order items:', error);
-      return res.status(500).json({ message: 'Failed to fetch order items' });
+      console.error('Ошибка при получении данных заказа:', error);
+      return res.status(500).json({ message: 'Не удалось получить данные заказа' });
     }
   });
 
@@ -215,8 +215,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ errors: error.errors });
       }
-      console.error('Error creating order:', error);
-      return res.status(500).json({ message: 'Failed to create order' });
+      console.error('Ошибка создания заказа', error);
+      return res.status(500).json({ message: 'Не удалось создать заказ' });
     }
   });
 
@@ -236,7 +236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedOrder = await storage.updateOrderStatus(Number(req.params.id), status);
       
       if (!updatedOrder) {
-        return res.status(404).json({ message: 'Order not found' });
+        return res.status(404).json({ message: 'Заказ не найден' });
       }
       
       return res.json(updatedOrder);
@@ -244,8 +244,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ errors: error.errors });
       }
-      console.error('Error updating order status:', error);
-      return res.status(500).json({ message: 'Failed to update order status' });
+      console.error('Ошибка обновления статуса заказа', error);
+      return res.status(500).json({ message: 'Не удалось обновить статус заказа' });
     }
   });
 
@@ -265,7 +265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedOrder = await storage.updateOrder(Number(req.params.id), validatedOrder);
       
       if (!updatedOrder) {
-        return res.status(404).json({ message: 'Order not found' });
+        return res.status(404).json({ message: 'Заказ не найден' });
       }
       
       // Update the items if provided
@@ -292,8 +292,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ errors: error.errors });
       }
-      console.error('Error updating order:', error);
-      return res.status(500).json({ message: 'Failed to update order' });
+      console.error('Ошибка обновления заказа', error);
+      return res.status(500).json({ message: 'Не удалось обновить заказ' });  
     }
   });
 
@@ -302,26 +302,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const success = await storage.deleteOrder(Number(req.params.id));
       
       if (!success) {
-        return res.status(404).json({ message: 'Order not found' });
+        return res.status(404).json({ message: 'Заказ не найден' });
       }
       
       return res.json({ success: true });
     } catch (error) {
-      console.error('Error deleting order:', error);
-      return res.status(500).json({ message: 'Failed to delete order' });
+      console.error('Ошибка удаления заказа', error);
+      return res.status(500).json({ message: 'Не удалось удалить заказ' });
     }
   });
 
   // Add a new endpoint to delete all writeoffs
   app.delete('/api/writeoffs', async (req: Request, res: Response) => {
     try {
-      console.log("Clearing writeoffs...");
+      console.log("Очистка списаний...");
       const success = await storage.clearWriteoffs();
-      console.log("Writeoffs cleared:", success);
+      console.log("Списания очищены:", success);
       return res.json({ success });
     } catch (error) {
-      console.error('Error clearing writeoffs:', error);
-      return res.status(500).json({ message: 'Failed to clear writeoffs' });
+      console.error('EОшибка очистки списаний:', error);
+      return res.status(500).json({ message: 'Не удалось очистить списания' });
     }
   });
   

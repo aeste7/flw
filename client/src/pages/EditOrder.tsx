@@ -147,8 +147,8 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
           });
           
           toast({
-            title: "Warning",
-            description: "The order had an invalid date. Current date/time has been set.",
+            title: "Внимание",
+            description: "Ошибка поля дата. Было установлено текущее время",
             variant: "destructive",
           });
         }
@@ -235,15 +235,15 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       toast({
-        title: "Order updated",
-        description: "The order has been updated successfully.",
+        title: "Обновление заказа",
+        description: "Заказ был успешно обновлён",
       });
       navigate("/active-orders");
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: "Failed to update order. Please try again.",
+        title: "Ошибка",
+        description: "Не удалось обновить заказ, пожалуйста, повторите попытку",
         variant: "destructive",
       });
       console.error("Error updating order:", error);
@@ -270,8 +270,8 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
     // Check if any flowers are selected
     if (items.length === 0) {
       toast({
-        title: "Error",
-        description: "Please select at least one flower for the order",
+        title: "Ошибка",
+        description: "Пожалуйста, выберите хотя бы один цветок",
         variant: "destructive",
       });
       return;
@@ -321,16 +321,16 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
           onClick={handleCancel}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Orders
+          Вернуться к заказам
         </Button>
-        <h1 className="text-2xl font-bold">Edit Order #{orderId}</h1>
-        <p className="text-gray-500">Update the order details below</p>
+        <h1 className="text-2xl font-bold">Редактировать заказ №{orderId}</h1>
+        <p className="text-gray-500">Обновить данные выбранного заказа</p>
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="from">From</Label>
+            <Label htmlFor="from">От</Label>
             <Input
               id="from"
               name="from"
@@ -341,7 +341,7 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="to">To</Label>
+            <Label htmlFor="to">К</Label>
             <Input
               id="to"
               name="to"
@@ -353,7 +353,7 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="address">Address</Label>
+          <Label htmlFor="address">Адрес</Label>
           <Input
             id="address"
             name="address"
@@ -364,7 +364,7 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="dateTime">Date and Time</Label>
+          <Label htmlFor="dateTime">Дата и время</Label>
           <Input
             id="dateTime"
             name="dateTime"
@@ -376,7 +376,7 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="notes">Notes</Label>
+          <Label htmlFor="notes">Заметки</Label>
           <Textarea
             id="notes"
             name="notes"
@@ -387,7 +387,7 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
         </div>
         
         <div className="space-y-2">
-          <Label>Select Flowers</Label>
+          <Label>Выбрать цветы</Label>
           {isFlowersLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-10 w-full" />
@@ -403,7 +403,7 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
           {selectedFlowers.size > 0 && (
             <Card className="mt-4">
               <CardContent className="p-4">
-                <h4 className="text-sm font-medium mb-2">Selected Flowers</h4>
+                <h4 className="text-sm font-medium mb-2">Выбранные цветы</h4>
                 <ul className="space-y-2">
                   {Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
                     const flower = flowers.find(f => f.id === flowerId);
@@ -435,7 +435,7 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
             type="submit"
             disabled={updateOrderMutation.isPending}
           >
-            {updateOrderMutation.isPending ? "Saving..." : "Save Changes"}
+            {updateOrderMutation.isPending ? "Сохранение..." : "Сохранить изменения"}
           </Button>
         </div>
       </form>

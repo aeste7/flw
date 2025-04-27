@@ -12,11 +12,11 @@ interface HeaderTitles {
 }
 
 const headerTitles: HeaderTitles = {
-  "/": "Bloom Manager",
-  "/new-order": "New Order",
-  "/active-orders": "Active Orders",
-  "/warehouse": "Warehouse",
-  "/notes": "Notes",
+  "/": "Цветочный менеджер",
+  "/new-order": "Новый заказ",
+  "/active-orders": "Активные заказы",
+  "/warehouse": "Склад",
+  "/notes": "Заметки",
 };
 
 export default function Layout({ children }: LayoutProps) {
@@ -38,14 +38,14 @@ export default function Layout({ children }: LayoutProps) {
       <header className="bg-white shadow-sm fixed top-0 left-0 right-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-2 flex items-center justify-between">
           <h1 className="text-xl font-semibold text-gray-800">
-            {headerTitles[baseRoute] || "Bloom Manager"}
+            {headerTitles[baseRoute] || "Цветочный менеджер"}
           </h1>
           
           {!isHome && (
             <button
               onClick={() => navigate("/")}
               className="rounded-full p-2 text-gray-500 hover:bg-gray-100"
-              aria-label="Go back to home"
+              aria-label="Вернуться на домашнюю страницу"
             >
               <ArrowLeft className="h-6 w-6" />
             </button>

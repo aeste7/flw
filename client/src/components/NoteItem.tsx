@@ -25,8 +25,8 @@ export default function NoteItem({ note }: NoteItemProps) {
   
   // Form schema
   const formSchema = z.object({
-    title: z.string().min(1, "Title is required"),
-    content: z.string().min(1, "Content is required"),
+    title: z.string().min(1, "Укажите заголовок"),
+    content: z.string().min(1, "Введите содержание"),
   });
   
   // Form
@@ -47,14 +47,14 @@ export default function NoteItem({ note }: NoteItemProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/notes'] });
       setShowEditModal(false);
       toast({
-        title: "Success",
-        description: "Note updated successfully",
+        title: "Успешно",
+        description: "Заметка была успешно обновлена",
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: `Failed to update note: ${error.message}`,
+        title: "Ошибка",
+        description: `не удалось обновить заметку: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -68,14 +68,14 @@ export default function NoteItem({ note }: NoteItemProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notes'] });
       toast({
-        title: "Success",
-        description: "Note deleted successfully",
+        title: "Успешно",
+        description: "Заметка была удалена",
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: `Failed to delete note: ${error.message}`,
+        title: "Ошибка",
+        description: `Не удалось удалить заметку: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -112,7 +112,7 @@ export default function NoteItem({ note }: NoteItemProps) {
               className="text-indigo-600 hover:text-indigo-800 p-0"
               onClick={() => setShowEditModal(true)}
             >
-              Edit
+              Редактировать
             </Button>
             <Button 
               variant="link" 
@@ -121,7 +121,7 @@ export default function NoteItem({ note }: NoteItemProps) {
               onClick={handleDelete}
               disabled={deleteNoteMutation.isPending}
             >
-              Delete
+              Удалить
             </Button>
           </div>
         </CardFooter>
@@ -131,7 +131,7 @@ export default function NoteItem({ note }: NoteItemProps) {
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Note</DialogTitle>
+            <DialogTitle>Редактировать заметку</DialogTitle>
           </DialogHeader>
           
           <Form {...form}>
@@ -141,7 +141,7 @@ export default function NoteItem({ note }: NoteItemProps) {
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title</FormLabel>
+                    <FormLabel>Заголовок</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -155,7 +155,7 @@ export default function NoteItem({ note }: NoteItemProps) {
                 name="content"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Content</FormLabel>
+                    <FormLabel>Содержимое</FormLabel>
                     <FormControl>
                       <Textarea 
                         rows={4}
@@ -169,7 +169,7 @@ export default function NoteItem({ note }: NoteItemProps) {
               
               <DialogFooter>
                 <Button type="submit" disabled={updateNoteMutation.isPending}>
-                  Save Changes
+                  Сохранить изменения
                 </Button>
               </DialogFooter>
             </form>

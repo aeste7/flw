@@ -26,8 +26,8 @@ export default function Notes() {
   
   // Form schema
   const formSchema = z.object({
-    title: z.string().min(1, "Title is required"),
-    content: z.string().min(1, "Content is required"),
+    title: z.string().min(1, "Требуется указать заголовок"),
+    content: z.string().min(1, "Требуется создать содержимое заметки"),
   });
   
   // Form
@@ -49,14 +49,14 @@ export default function Notes() {
       setShowAddNoteModal(false);
       form.reset();
       toast({
-        title: "Success",
-        description: "Note added successfully",
+        title: "Добавление заметки",
+        description: "Заметка успешно добавлена!",
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: `Failed to add note: ${error.message}`,
+        title: "Ошибка",
+        description: `Не удалось добавить заметку: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -70,12 +70,12 @@ export default function Notes() {
   return (
     <section className="max-w-3xl mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-medium">Notes</h2>
+        <h2 className="text-lg font-medium">Заметки</h2>
         <Button
           onClick={() => setShowAddNoteModal(true)}
           className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white"
         >
-          Add Note
+          Добавить заметку
         </Button>
       </div>
       
@@ -100,7 +100,7 @@ export default function Notes() {
           ))
         ) : notes.length === 0 ? (
           <div className="text-center py-8 bg-white rounded-lg shadow-sm border border-gray-200">
-            <p className="text-gray-500">No notes yet. Add one to get started.</p>
+            <p className="text-gray-500">Пока ещё нет заметок. Вы можете добавить новую заметку.</p>
           </div>
         ) : (
           notes.map(note => (
@@ -113,7 +113,7 @@ export default function Notes() {
       <Dialog open={showAddNoteModal} onOpenChange={setShowAddNoteModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Note</DialogTitle>
+            <DialogTitle>Добавить заметку</DialogTitle>
           </DialogHeader>
           
           <Form {...form}>
@@ -123,9 +123,9 @@ export default function Notes() {
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title</FormLabel>
+                    <FormLabel>Заголовок</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter note title" {...field} />
+                      <Input placeholder="Введите заголовок заметки" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -137,11 +137,11 @@ export default function Notes() {
                 name="content"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Content</FormLabel>
+                    <FormLabel>Содержимое</FormLabel>
                     <FormControl>
                       <Textarea 
                         rows={4} 
-                        placeholder="Enter note content"
+                        placeholder="Введите заметку"
                         {...field} 
                       />
                     </FormControl>
@@ -156,7 +156,7 @@ export default function Notes() {
                   className="bg-indigo-600 hover:bg-indigo-700"
                   disabled={addNoteMutation.isPending}
                 >
-                  Save Note
+                  Сохранить заметку
                 </Button>
               </DialogFooter>
             </form>

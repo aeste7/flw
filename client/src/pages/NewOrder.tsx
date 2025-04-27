@@ -28,11 +28,11 @@ export default function NewOrder() {
   
   // Form schema
   const formSchema = z.object({
-    from: z.string().min(1, "Sender name is required"),
-    to: z.string().min(1, "Recipient name is required"),
-    address: z.string().min(1, "Delivery address is required"),
-    date: z.string().min(1, "Delivery date is required"),
-    time: z.string().min(1, "Delivery time is required"),
+    from: z.string().min(1, "Укажите имя отправителя"),
+    to: z.string().min(1, "Укажите имя получателя"),
+    address: z.string().min(1, "Укажите адрес доставки"),
+    date: z.string().min(1, "Укажите дату доставки"),
+    time: z.string().min(1, "Укажите время доставки"),
     notes: z.string().optional(),
   });
   
@@ -79,7 +79,7 @@ export default function NewOrder() {
       
       // Check if any flowers are selected
       if (items.length === 0) {
-        throw new Error("Please select at least one flower for the order");
+        throw new Error("Пожалуйста, выберите хотя бы один цветок");
       }
       
       // Create order
@@ -98,14 +98,14 @@ export default function NewOrder() {
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
       toast({
-        title: "Success",
-        description: "Order created successfully",
+        title: "Новый заказ",
+        description: "Заказ был успешно создан",
       });
       navigate("/active-orders");
     },
     onError: (error) => {
       toast({
-        title: "Error",
+        title: "Ошибка",
         description: error.message,
         variant: "destructive",
       });
@@ -121,7 +121,7 @@ export default function NewOrder() {
     <section className="max-w-3xl mx-auto p-4">
       <Card className="bg-white rounded-lg shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Create New Order</CardTitle>
+          <CardTitle className="text-lg">Добавление нового заказа</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -129,10 +129,10 @@ export default function NewOrder() {
               
               <div>
                 <Label htmlFor="flowers" className="block text-sm font-medium text-gray-700 mb-1">
-                  Select Flowers
+                  Выберите цветы
                 </Label>
                 {isLoading ? (
-                  <div className="p-4 text-center">Loading flowers...</div>
+                  <div className="p-4 text-center">Загружаются цветы...</div>
                 ) : (
                   <FlowerSelector
                     flowers={flowers}
@@ -141,7 +141,7 @@ export default function NewOrder() {
                   />
                 )}
                 {selectedFlowers.size === 0 && createOrderMutation.isError && (
-                  <p className="text-sm text-red-500 mt-1">Please select at least one flower</p>
+                  <p className="text-sm text-red-500 mt-1">Пожалуйста, выберите, пожалуйста цветы</p>
                 )}
               </div>
               
@@ -150,9 +150,9 @@ export default function NewOrder() {
                 name="from"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>From (Sender)</FormLabel>
+                    <FormLabel>От</FormLabel>
                     <FormControl>
-                      <Input placeholder="Sender name" {...field} />
+                      <Input placeholder="Имя отправителя" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -164,9 +164,9 @@ export default function NewOrder() {
                 name="to"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>To (Recipient)</FormLabel>
+                    <FormLabel>К</FormLabel>
                     <FormControl>
-                      <Input placeholder="Recipient name" {...field} />
+                      <Input placeholder="Имя получателя" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -178,11 +178,11 @@ export default function NewOrder() {
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Delivery Address</FormLabel>
+                    <FormLabel>Адрес доставки</FormLabel>
                     <FormControl>
                       <Textarea 
                         rows={2} 
-                        placeholder="Enter delivery address"
+                        placeholder="Введите адрес доставки"
                         {...field} 
                       />
                     </FormControl>
@@ -193,7 +193,7 @@ export default function NewOrder() {
               
               <div>
                 <Label className="block text-sm font-medium text-gray-700 mb-1">
-                  Delivery Date & Time
+                  Дата и время доставки
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
                   <FormField
@@ -229,11 +229,11 @@ export default function NewOrder() {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes</FormLabel>
+                    <FormLabel>Заметки</FormLabel>
                     <FormControl>
                       <Textarea 
                         rows={3} 
-                        placeholder="Add any special instructions or notes"
+                        placeholder="Дополнительные указания и заметки"
                         {...field} 
                       />
                     </FormControl>
@@ -247,7 +247,7 @@ export default function NewOrder() {
                 className="w-full"
                 disabled={createOrderMutation.isPending}
               >
-                Create Order
+                Создать заказ
               </Button>
             </form>
           </Form>
