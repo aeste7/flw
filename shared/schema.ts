@@ -8,7 +8,7 @@ export const OrderStatus = {
   Assembled: "Собран",
   Sent: "В доставке",
   Finished: "Доставлен",
-  Deleted: "Deleted",
+  Deleted: "Удалён",
 } as const;
 
 export type OrderStatusType = typeof OrderStatus[keyof typeof OrderStatus];
