@@ -14,6 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import FlowerSelector from "@/components/FlowerSelector";
 import { useLocation } from "wouter";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function NewOrder() {
   const [selectedFlowers, setSelectedFlowers] = useState<Map<number, number>>(new Map());
@@ -29,11 +30,21 @@ export default function NewOrder() {
   // Form schema
   const formSchema = z.object({
     from: z.string().min(1, "Укажите имя отправителя"),
-    to: z.string().min(1, "Укажите имя получателя"),
-    address: z.string().min(1, "Укажите адрес доставки"),
+    to: z.string().optional(), // Make optional
+    address: z.string().optional(), // Make optional
     date: z.string().min(1, "Укажите дату доставки"),
     time: z.string().min(1, "Укажите время доставки"),
     notes: z.string().optional(),
+    pickup: z.boolean().default(false),
+  }).refine((data) => {
+    // If pickup is false, then 'to' and 'address' are required
+    if (!data.pickup) {
+      return !!data.to && !!data.address;
+    }
+    return true;
+  }, {
+    message: "Укажите имя получателя и адрес доставки",
+    path: ["to", "address"],
   });
   
   // Form
@@ -46,9 +57,10 @@ export default function NewOrder() {
       date: new Date().toISOString().split('T')[0],
       time: "",
       notes: "",
+      pickup: false, // Default to delivery
     },
   });
-  
+
   // Handle flower selection
   const handleSelectFlower = (flowerId: number, amount: number) => {
     const newSelectedFlowers = new Map(selectedFlowers);
@@ -86,10 +98,11 @@ export default function NewOrder() {
       await apiRequest('POST', '/api/orders', {
         order: {
           from: data.from,
-          to: data.to,
-          address: data.address,
+          to: data.pickup ? "Самовывоз" : data.to,
+          address: data.pickup ? "Магазин" : data.address,
           dateTime: dateTime.toISOString(),
           notes: data.notes,
+          pickup: data.pickup, // Include pickup field
         },
         items,
       });
@@ -162,33 +175,48 @@ export default function NewOrder() {
               <FormField
                 control={form.control}
                 name="to"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>К</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Имя получателя" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  // Get the pickup value from the form
+                  const pickup = form.watch("pickup");
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel>К</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Имя получателя" 
+                          {...field} 
+                          disabled={pickup}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
-              
+                            
               <FormField
                 control={form.control}
                 name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Адрес доставки</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        rows={2} 
-                        placeholder="Введите адрес доставки"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  // Get the pickup value from the form
+                  const pickup = form.watch("pickup");
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel>Адрес доставки</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          rows={2} 
+                          placeholder="Введите адрес доставки"
+                          {...field} 
+                          disabled={pickup}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               
               <div>
@@ -223,6 +251,30 @@ export default function NewOrder() {
                   />
                 </div>
               </div>
+              
+              {/* Add pickup checkbox */}
+              <FormField
+                control={form.control}
+                name="pickup"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Самовывоз
+                      </FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Клиент заберет заказ сам из магазина
+                      </p>
+                    </div>
+                  </FormItem>
+                )}
+              />
               
               <FormField
                 control={form.control}

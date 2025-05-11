@@ -43,6 +43,26 @@ export async function seedDatabase() {
         }
       ]);
       
+      // Add a sample pickup order
+      const pickupOrder = await db.insert(schema.orders).values({
+        from: "Магазин",
+        to: "Иван Петров",
+        address: "ул. Цветочная, 15",
+        dateTime: new Date(Date.now() + 86400000), // Tomorrow
+        notes: "Клиент заберет заказ сам",
+        status: schema.OrderStatus.New,
+        pickup: true
+      }).returning();
+      
+      if (pickupOrder.length > 0) {
+        // Add some flowers to the pickup order
+        await db.insert(schema.orderItems).values([
+          { orderId: pickupOrder[0].id, flower: "Роза красная", amount: 5 },
+          { orderId: pickupOrder[0].id, flower: "Лилия белая", amount: 3 }
+        ]);
+      }
+
+      
       console.log("Database seeded with initial data");
     }
   } catch (error) {

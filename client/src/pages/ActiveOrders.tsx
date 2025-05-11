@@ -51,6 +51,7 @@ export default function ActiveOrders() {
     address: '',
     dateTime: '',
     notes: '',
+    pickup: false, // Add pickup field
   });
   
   // Query for available flowers
@@ -70,6 +71,7 @@ export default function ActiveOrders() {
         address: editOrder.address,
         dateTime: localDateStr,
         notes: editOrder.notes || '',
+        pickup: editOrder.pickup || false, // Set pickup value
       });
     }
   }, [editOrder]);
@@ -78,10 +80,6 @@ export default function ActiveOrders() {
   useEffect(() => {
     navigate(`/active-orders${activeTab !== "orders" ? `?tab=${activeTab}` : ""}`, { replace: true });
   }, [activeTab, navigate]);
-
-
-
-    
     
   // Then, define your queries
   const { data: orders = [], isLoading } = useQuery<Order[]>({
@@ -117,7 +115,6 @@ export default function ActiveOrders() {
     enabled: !!viewOrder,
   });
   
-
   // Now you can use useEffect with orderItems
   useEffect(() => {
     if (orderItems) {
@@ -126,7 +123,6 @@ export default function ActiveOrders() {
     }
   }, [orderItems]);
     
-  
   // Query for order items when editing
   const { data: editOrderItems = [], isLoading: isEditItemsLoading } = useQuery<OrderItemType[]>({
     queryKey: ['/api/orders', editOrder?.id, 'items'],
@@ -175,7 +171,7 @@ export default function ActiveOrders() {
       setEditOrder(null);
       toast({
         title: "Обновление заказа",
-        description: "Заказ бы успешно обновлён",
+        description: "Заказ был успешно обновлён",
       });
     },
     onError: (error) => {
@@ -197,7 +193,7 @@ export default function ActiveOrders() {
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       toast({
         title: "Удаление заказа",
-        description: "Заказ бы успешно удалён",
+        description: "Заказ был успешно удалён",
       });
       setIsDeleteDialogOpen(false);
     },
@@ -233,22 +229,31 @@ export default function ActiveOrders() {
     }
   }, [orders]);
 
-  // Make sure the filter logic is correct
+  
   const filteredOrders = orders.filter(order => {
     // Add debugging
     console.log(`Фильтруем заказ #${order.id} со статусом ${order.status} для вкладки ${activeTab}`);
     
     if (activeTab === "orders") {
-      return order.status === OrderStatus.New || order.status === OrderStatus.Assembled;
+      // Keep pickup orders in the "orders" tab until they are sent
+      return (order.status === OrderStatus.New || order.status === OrderStatus.Assembled);
     } else if (activeTab === "delivery") {
       if (showFinishedOrders) {
-        return order.status === OrderStatus.Sent || order.status === OrderStatus.Finished;
+        return (order.status === OrderStatus.Sent || order.status === OrderStatus.Finished) && !order.pickup;
       } else {
-        return order.status === OrderStatus.Sent;
+        return order.status === OrderStatus.Sent && !order.pickup;
+      }
+    } else if (activeTab === "pickup") {
+      // Only show pickup orders in the "pickup" tab when they are sent or finished
+      if (showFinishedOrders) {
+        return order.pickup && (order.status === OrderStatus.Sent || order.status === OrderStatus.Finished);
+      } else {
+        return order.pickup && order.status === OrderStatus.Sent;
       }
     }
     return false;
   });
+  
 
   // Log the filtered results
   useEffect(() => {
@@ -341,6 +346,14 @@ export default function ActiveOrders() {
     });
   };
   
+  // Handle checkbox change
+  const handleCheckboxChange = (checked: boolean) => {
+    setFormData({
+      ...formData,
+      pickup: checked,
+    });
+  };
+  
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -377,6 +390,7 @@ export default function ActiveOrders() {
           address: formData.address,
           dateTime: dateTime.toISOString(),
           notes: formData.notes || null,
+          pickup: formData.pickup,
         },
         items,
       }
@@ -393,9 +407,10 @@ export default function ActiveOrders() {
     <section className="max-w-3xl mx-auto">
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 w-full rounded-none">
+        <TabsList className="grid grid-cols-3 w-full rounded-none">
           <TabsTrigger value="orders">Заказы</TabsTrigger>
           <TabsTrigger value="delivery">Доставка</TabsTrigger>
+          <TabsTrigger value="pickup">Самовывоз</TabsTrigger>
         </TabsList>
         
         {/* Orders Tab Content */}
@@ -489,6 +504,55 @@ export default function ActiveOrders() {
             </div>
           )}
         </TabsContent>
+        
+        {/* Pickup Tab Content */}
+        <TabsContent value="pickup" className="p-4">
+        <div className="flex items-center space-x-2 mb-4">
+            <Checkbox 
+              id="showFinishedOrders" 
+              checked={showFinishedOrders}
+              onCheckedChange={(checked) => setShowFinishedOrders(checked === true)}
+            />
+            <Label 
+              htmlFor="showFinishedOrders" 
+              className="text-sm font-medium cursor-pointer"
+            >
+              Показывать завершённые заказы
+            </Label>
+          </div>
+
+          {isLoading ? (
+            // Loading skeleton
+            Array(2).fill(0).map((_, i) => (
+              <div key={i} className="space-y-3">
+                <Skeleton className="h-[120px] w-full rounded-lg" />
+                <Skeleton className="h-[120px] w-full rounded-lg" />
+              </div>
+            ))
+          ) : filteredOrders.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Заказы на самовывоз не найдены</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredOrders.map(order => (
+                <OrderItem
+                  key={order.id}
+                  order={order}
+                  onView={() => {
+                    setViewOrder(order);
+                    setIsViewOpen(true);
+                  }}
+                  // onEdit={() => {
+                  //   setEditOrder(order);
+                  //   setIsEditOpen(true);
+                  // }}
+                  onDelete={() => handleDeleteClick(order.id)} 
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
       
       {/* View Order Dialog */}
@@ -522,6 +586,9 @@ export default function ActiveOrders() {
                     <span className="text-gray-500">Дата:</span>
                     <span>{formatDateTime(viewOrder.dateTime)}</span>
                     
+                    <span className="text-gray-500">Тип:</span>
+                    <span>{viewOrder.pickup ? "Самовывоз" : "Доставка"}</span>
+                    
                     {viewOrder.notes && (
                       <>
                         <span className="text-gray-500">Заметки:</span>
@@ -538,7 +605,7 @@ export default function ActiveOrders() {
                       <Skeleton className="h-8 w-full" />
                       <Skeleton className="h-8 w-full" />
                     </div>
-                  ) : !Array.isArray(orderItems) || orderItems.length === 0 ? (
+                                    ) : !Array.isArray(orderItems) || orderItems.length === 0 ? (
                     <p className="text-sm text-gray-500">В заказе нет цветов.</p>
                   ) : (
                     <ul className="space-y-2">
@@ -546,17 +613,13 @@ export default function ActiveOrders() {
                         <li key={item.id} className="text-sm">
                           <div className="flex justify-between">
                             <span>{item.flower}</span>
-                            <span>{item.amount} pcs</span>
+                            <span>{item.amount} шт.</span>
                           </div>
                         </li>
                       ))}
                     </ul>
                   )}
                 </div>
-
-
-                
-
               </div>
             </div>
           )}
@@ -626,6 +689,21 @@ export default function ActiveOrders() {
                 />
               </div>
               
+              {/* Add pickup checkbox to edit dialog */}
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="pickup" 
+                  checked={formData.pickup}
+                  onCheckedChange={handleCheckboxChange}
+                />
+                <Label 
+                  htmlFor="pickup" 
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Самовывоз
+                </Label>
+              </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="notes">Заметки</Label>
                 <Textarea
@@ -662,7 +740,7 @@ export default function ActiveOrders() {
                             <li key={flowerId} className="text-sm">
                               <div className="flex justify-between">
                                 <span>{flower?.flower}</span>
-                                <span>{amount} pcs</span>
+                                <span>{amount} шт.</span>
                               </div>
                             </li>
                           );
@@ -715,7 +793,8 @@ export default function ActiveOrders() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </section>
   );
 }
+
+

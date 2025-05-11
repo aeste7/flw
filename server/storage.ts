@@ -22,6 +22,7 @@ export interface IStorage {
   getFlowerByName(name: string): Promise<Warehouse | undefined>;
   addFlowers(flower: InsertWarehouse): Promise<Warehouse>;
   updateFlowers(id: number, flower: Partial<InsertWarehouse>): Promise<Warehouse | undefined>;
+  deleteFlower(id: number): Promise<boolean>;
   
   // Writeoffs methods
   getWriteoffs(): Promise<Writeoff[]>;
@@ -433,6 +434,25 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return flower;
   }
+
+  async deleteFlower(id: number): Promise<boolean> {
+    try {
+      console.log("Storage: Deleting flower with ID:", id);
+      
+      const result = await db
+        .delete(warehouseTable)
+        .where(eq(warehouseTable.id, id))
+        .returning({ id: warehouseTable.id });
+      
+      console.log("Storage: Delete result:", result);
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting flower:", error);
+      throw error;
+    }
+  }
+  
 
   async updateFlowers(id: number, flowerUpdate: Partial<InsertWarehouse>): Promise<Warehouse | undefined> {
     const [updatedFlower] = await db

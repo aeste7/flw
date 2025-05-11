@@ -218,7 +218,7 @@ export default function Warehouse() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-2 w-full rounded-none mb-4">
           <TabsTrigger value="available">Доступны</TabsTrigger>
-          <TabsTrigger value="writeoff">Списать</TabsTrigger>
+          <TabsTrigger value="writeoff">Журнал списаний</TabsTrigger>
         </TabsList>
         
         {/* Available Tab */}
@@ -239,7 +239,7 @@ export default function Warehouse() {
               ))
             ) : flowers.length === 0 ? (
               <div className="p-6 text-center text-gray-500">
-                Нет цвдоступных цветов. Добавьте новые цветы.
+                Нет доступных, добавьте новые цветы.
               </div>
             ) : (
               flowers.map(flower => (
@@ -252,7 +252,7 @@ export default function Warehouse() {
         {/* Write Off Tab */}
         <TabsContent value="writeoff" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-base font-medium">История списания</h3>
+            <h3 className="text-base font-medium">История списания цветов</h3>
             
             <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
               <AlertDialogTrigger asChild>
@@ -310,7 +310,7 @@ export default function Warehouse() {
                         <p className="text-sm text-gray-600">{formatDate(writeoff.dateTime)}</p>
                       </div>
                       <span className="bg-rose-100 text-rose-700 px-2 py-1 rounded text-xs font-medium">
-                        -{writeoff.amount} pcs
+                        -{writeoff.amount} шт.
                       </span>
                     </div>
                   </CardContent>

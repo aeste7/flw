@@ -169,17 +169,52 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
     });
     setShowWriteOffModal(false);
   };
-  
+
   // Handle write-off all
   const handleWriteOffAll = () => {
     setShowContextMenu(false);
+    console.log("Writing off all flowers:", flower);
+    
     if (flower.amount > 0) {
-      writeoffMutation.mutate({ 
-        flowerId: flower.id, 
+      // First, create a writeoff record for the flowers
+      console.log("Creating writeoff record for", flower.amount, "flowers");
+      
+      apiRequest('POST', '/api/writeoffs', { 
+        flower: flower.flower,
         amount: flower.amount
+      }).then((response) => {
+        console.log("Writeoff response:", response);
+        
+        // Then delete the flower from inventory
+        console.log("Attempting to delete flower with ID:", flower.id);
+        return apiRequest('DELETE', `/api/flowers/${flower.id}`);
+      }).then((response) => {
+        console.log("Delete response:", response);
+        
+        queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/writeoffs'] });
+        
+        toast({
+          title: "Успешно",
+          description: "Цветы были полностью удалены из инвентаря",
+        });
+      }).catch(error => {
+        console.error("Error in handleWriteOffAll:", error);
+        
+        toast({
+          title: "Ошибка",
+          description: `Не удалось удалить цветы: ${error.message}`,
+          variant: "destructive",
+        });
       });
+    } else {
+      console.log("No flowers to write off (amount is 0)");
     }
   };
+
+
+
+
   
   return (
     <>

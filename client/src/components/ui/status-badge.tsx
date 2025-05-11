@@ -4,10 +4,11 @@ import { cn } from "@/lib/utils";
 
 interface StatusBadgeProps {
   status: OrderStatusType;
+  pickup?: boolean; // Add pickup as an optional boolean prop
   className?: string;
 }
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
+export function StatusBadge({ status, pickup, className }: StatusBadgeProps) {
   const getStatusStyles = () => {
     switch (status) {
       case OrderStatus.New:
@@ -26,15 +27,25 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   };
 
   return (
-    <Badge 
-      variant="outline" 
-      className={cn(
-        "rounded-full font-medium py-0.5", 
-        getStatusStyles(),
-        className
+    <div className="flex gap-2">
+      <Badge 
+        variant="outline" 
+        className={cn(
+          "rounded-full font-medium py-0.5", 
+          getStatusStyles(),
+          className
+        )}
+      >
+        {status}
+      </Badge>
+      {pickup && (
+        <Badge 
+          variant="outline" 
+          className="rounded-full font-medium py-0.5 bg-amber-100 text-amber-800 hover:bg-amber-100"
+        >
+          Самовывоз
+        </Badge>
       )}
-    >
-      {status}
-    </Badge>
+    </div>
   );
 }

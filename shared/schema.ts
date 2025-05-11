@@ -70,6 +70,7 @@ export const orders = pgTable("orders", {
   dateTime: timestamp("date_time").notNull(),
   notes: text("notes"),
   status: text("status").notNull().default(OrderStatus.New),
+  pickup: boolean("pickup").default(false).notNull(),
 });
 
 export const insertOrderSchema = createInsertSchema(orders).omit({
@@ -78,6 +79,7 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
 
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = typeof orders.$inferSelect;
+
 
 // Order Items (flowers in an order)
 export const orderItems = pgTable("order_items", {

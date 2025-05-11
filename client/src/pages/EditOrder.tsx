@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import FlowerSelector from "@/components/FlowerSelector";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function EditOrder() {
   const [match, params] = useRoute("/edit-order/:id");
@@ -30,10 +31,11 @@ export default function EditOrder() {
     address: '',
     dateTime: '',
     notes: '',
+    pickup: false, // Add pickup field
   });
   
-// Query for the order
-const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
+  // Query for the order
+  const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
     queryKey: ['/api/orders', orderId],
     queryFn: async () => {
       if (!orderId) return null;
@@ -57,19 +59,29 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
   const { data: orderItems = [], isLoading: isItemsLoading } = useQuery<OrderItemType[]>({
     queryKey: ['/api/orders', orderId, 'items'],
     queryFn: async () => {
-      if (!orderId) return [];
-      console.log("Fetching order items for order ID:", orderId);
-      const response = await apiRequest('GET', `/api/orders/${orderId}/items`);
-      
-      // Check if response is a Response object that needs to be parsed
-      if (response instanceof Response) {
-        const data = await response.json();
-        console.log("Parsed order items:", data);
-        return data;
+      if (!orderId) {
+        console.log("No order ID provided, returning empty array");
+        return [];
       }
-      
-      console.log("Order items received:", response);
-      return response;
+
+      console.log("Fetching order items for order ID:", orderId);
+      try {
+        const response = await apiRequest('GET', `/api/orders/${orderId}/items`);
+        console.log("Raw API response for items:", response);
+        
+        // Check if response is a Response object that needs to be parsed
+        if (response instanceof Response) {
+          const data = await response.json();
+          console.log("Parsed order items:", data);
+          return data;
+        }
+        
+        console.log("Order items received:", response);
+        return response;
+      } catch (error) {
+        console.error("Error fetching order items:", error);
+        return [];
+      }
     },
     enabled: !!orderId,
   });
@@ -77,6 +89,17 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
   // Query for available flowers
   const { data: flowers = [], isLoading: isFlowersLoading } = useQuery<Warehouse[]>({
     queryKey: ['/api/flowers'],
+    queryFn: async () => {
+      console.log("Fetching available flowers");
+      try {
+        const response = await apiRequest('GET', '/api/flowers');
+        console.log("Available flowers response:", response);
+        return response;
+      } catch (error) {
+        console.error("Error fetching flowers:", error);
+        return [];
+      }
+    }
   });
   
   // Set form data when order data is loaded
@@ -105,15 +128,16 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
             address: order.address,
             dateTime: localDateStr,
             notes: order.notes || '',
+            pickup: order.pickup || false, // Set pickup value
           });
           
-
           setFormData({
             from: order.from,
             to: order.to,
             address: order.address,
             dateTime: localDateStr,
             notes: order.notes || '',
+            pickup: order.pickup || false, // Set pickup value
           });
         } else {
           // Handle invalid date
@@ -135,15 +159,16 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
             address: order.address,
             dateTime: localDateStr,
             notes: order.notes || '',
+            pickup: order.pickup || false, // Set pickup value
           });
           
-
           setFormData({
             from: order.from,
             to: order.to,
             address: order.address,
             dateTime: localDateStr,
             notes: order.notes || '',
+            pickup: order.pickup || false, // Set pickup value
           });
           
           toast({
@@ -166,44 +191,68 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
         const localDateStr = `${year}-${month}-${day}T${hours}:${minutes}`;
         
         console.log("Setting form data:", {
-            from: order.from,
-            to: order.to,
-            address: order.address,
-            dateTime: localDateStr,
-            notes: order.notes || '',
-          });
-          
-
+          from: order.from,
+          to: order.to,
+          address: order.address,
+          dateTime: localDateStr,
+          notes: order.notes || '',
+          pickup: order.pickup || false, // Set pickup value
+        });
+        
         setFormData({
           from: order.from,
           to: order.to,
           address: order.address,
           dateTime: localDateStr,
           notes: order.notes || '',
+          pickup: order.pickup || false, // Set pickup value
         });
       }
     }
   }, [order, toast]);
   
   // Set selected flowers when order items are loaded
-  useEffect(() => {
-    console.log("Order items or flowers changed:", { orderItems, flowers });
-    if (orderItems && orderItems.length > 0 && flowers.length > 0) {
-      // Initialize the selectedFlowers map from the order items
-      const newSelectedFlowers = new Map<number, number>();
+// In the query for order items, add more detailed logging
+
+
+// In the useEffect for setting selected flowers, add more detailed logging
+useEffect(() => {
+  console.log("Order items or flowers changed:", { 
+    orderItems, 
+    orderItemsLength: orderItems?.length || 0,
+    flowers, 
+    flowersLength: flowers?.length || 0 
+  });
+  
+  if (orderItems && orderItems.length > 0 && flowers.length > 0) {
+    // Initialize the selectedFlowers map from the order items
+    const newSelectedFlowers = new Map<number, number>();
+    
+    orderItems.forEach((item: OrderItemType) => {
+      // Find the flower in the available flowers
+      console.log("Processing item:", item);
+      const flower = flowers.find(f => f.flower === item.flower);
+      console.log("Found flower:", flower);
       
-      orderItems.forEach((item: OrderItemType) => {
-        // Find the flower in the available flowers
-        const flower = flowers.find(f => f.flower === item.flower);
-        if (flower) {
-          newSelectedFlowers.set(flower.id, item.amount);
-        }
-      });
-      
-      console.log("Setting selected flowers:", newSelectedFlowers);
-      setSelectedFlowers(newSelectedFlowers);
-    }
-  }, [orderItems, flowers]);
+      if (flower) {
+        newSelectedFlowers.set(flower.id, item.amount);
+      } else {
+        console.warn(`Flower not found for item: ${item.flower}`);
+      }
+    });
+    
+    console.log("Setting selected flowers:", newSelectedFlowers);
+    setSelectedFlowers(newSelectedFlowers);
+  } else {
+    console.log("Not setting selected flowers because:", {
+      orderItemsExist: !!orderItems,
+      orderItemsLength: orderItems?.length || 0,
+      flowersExist: !!flowers,
+      flowersLength: flowers?.length || 0
+    });
+  }
+}, [orderItems, flowers]);
+
   
   // Handle flower selection
   const handleSelectFlower = (flowerId: number, amount: number) => {
@@ -223,6 +272,16 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
+    });
+  };
+  
+  // Handle checkbox change
+  const handleCheckboxChange = (checked: boolean) => {
+    setFormData({
+      ...formData,
+      pickup: checked,
+      // If pickup is checked, we can set default values for disabled fields
+      // but we'll keep the original values in case pickup is unchecked again
     });
   };
   
@@ -280,10 +339,11 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
     updateOrderMutation.mutate({
       order: {
         from: formData.from,
-        to: formData.to,
-        address: formData.address,
+        to: formData.pickup ? "Самовывоз" : formData.to, // Use "Самовывоз" for pickup orders
+        address: formData.pickup ? "Магазин" : formData.address, // Use "Магазин" for pickup orders
         dateTime: dateTime.toISOString(),
         notes: formData.notes || null,
+        pickup: formData.pickup, // Include pickup field
       },
       items,
     });
@@ -347,7 +407,8 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
               name="to"
               value={formData.to}
               onChange={handleInputChange}
-              required
+              disabled={formData.pickup}
+              required={!formData.pickup}
             />
           </div>
         </div>
@@ -359,7 +420,8 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
             name="address"
             value={formData.address}
             onChange={handleInputChange}
-            required
+            disabled={formData.pickup}
+            required={!formData.pickup}
           />
         </div>
         
@@ -373,6 +435,21 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
             onChange={handleInputChange}
             required
           />
+        </div>
+        
+        {/* Add pickup checkbox */}
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="pickup" 
+            checked={formData.pickup}
+            onCheckedChange={handleCheckboxChange}
+          />
+          <Label 
+            htmlFor="pickup" 
+            className="text-sm font-medium cursor-pointer"
+          >
+            Самовывоз
+          </Label>
         </div>
         
         <div className="space-y-2">
@@ -411,7 +488,7 @@ const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
                       <li key={flowerId} className="text-sm">
                         <div className="flex justify-between">
                           <span>{flower?.flower}</span>
-                          <span>{amount} pcs</span>
+                          <span>{amount} шт.</span>
                         </div>
                       </li>
                     );

@@ -199,9 +199,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const createOrderSchema = z.object({
     order: insertOrderSchema.extend({
       dateTime: z.string().transform(val => new Date(val)),
+      pickup: z.boolean().default(false),
     }),
     items: z.array(insertOrderItemSchema.omit({ orderId: true })),
   });
+  
+
 
   app.post('/api/orders', async (req: Request, res: Response) => {
     try {
@@ -320,10 +323,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Списания очищены:", success);
       return res.json({ success });
     } catch (error) {
-      console.error('EОшибка очистки списаний:', error);
+      console.error('Ошибка очистки списаний:', error);
       return res.status(500).json({ message: 'Не удалось очистить списания' });
     }
   });
+
+  app.delete('/api/flowers/:id', async (req: Request, res: Response) => {
+    try {
+      console.log("Deleting flower with ID:", req.params.id);
+      
+      const success = await storage.deleteFlower(Number(req.params.id));
+      
+      console.log("Delete result:", success);
+      
+      if (!success) {
+        return res.status(404).json({ message: 'Цветы не найдены' });
+      }
+      
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('Ошибка при удалении цветов:', error);
+      return res.status(500).json({ message: 'Не удалось удалить цветы' });
+    }
+  });
+  
+  
   
 
 

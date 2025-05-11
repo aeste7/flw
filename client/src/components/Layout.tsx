@@ -59,7 +59,7 @@ export default function Layout({ children }: LayoutProps) {
       </main>
       
       {/* Bottom Navigation (only on home screen) */}
-      {isHome && <BottomNavigation />}
+      {<BottomNavigation />}
     </div>
   );
 }
