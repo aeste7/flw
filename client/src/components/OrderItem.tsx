@@ -30,7 +30,20 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
   // Format date for display
   const formatDate = (dateString: string | Date) => {
     const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return format(date, "h:mm a");
+    return format(date, "d MMM yyyy");
+  };
+
+  // Format time period for display
+  const formatTimePeriod = (order: Order) => {
+    if (order.timeFrom && order.timeTo) {
+      return `${order.timeFrom} - ${order.timeTo}`;
+    } else if (order.timeFrom) {
+      return `с ${order.timeFrom}`;
+    } else {
+      // Fallback to the time from dateTime
+      const date = new Date(order.dateTime);
+      return format(date, "h:mm a");
+    }
   };
   
   // Update order status mutation
@@ -91,8 +104,12 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
           
           <div className="flex justify-between items-center">
             <div className="text-sm">
-              <span className="text-gray-500">Время: </span>
+              <span className="text-gray-500">Дата: </span>
               <span>{formatDate(order.dateTime)}</span>
+            </div>
+            <div className="text-sm">
+              <span className="text-gray-500">Время: </span>
+              <span>{formatTimePeriod(order)}</span>
             </div>
             
             <div className="flex items-center space-x-2">

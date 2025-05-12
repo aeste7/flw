@@ -33,7 +33,9 @@ export default function NewOrder() {
     to: z.string().optional(), // Make optional
     address: z.string().optional(), // Make optional
     date: z.string().min(1, "Укажите дату доставки"),
-    time: z.string().min(1, "Укажите время доставки"),
+    // Replace single time with timeFrom and timeTo
+    timeFrom: z.string().min(1, "Укажите время начала доставки"),
+    timeTo: z.string().min(1, "Укажите время окончания доставки"),
     notes: z.string().optional(),
     pickup: z.boolean().default(false),
   }).refine((data) => {
@@ -45,6 +47,15 @@ export default function NewOrder() {
   }, {
     message: "Укажите имя получателя и адрес доставки",
     path: ["to", "address"],
+  }).refine((data) => {
+    // Ensure timeTo is after timeFrom
+    if (data.timeFrom && data.timeTo) {
+      return data.timeFrom <= data.timeTo;
+    }
+    return true;
+  }, {
+    message: "Время окончания должно быть позже времени начала",
+    path: ["timeTo"],
   });
   
   // Form
@@ -55,7 +66,8 @@ export default function NewOrder() {
       to: "",
       address: "",
       date: new Date().toISOString().split('T')[0],
-      time: "",
+      timeFrom: "",
+      timeTo: "",
       notes: "",
       pickup: false, // Default to delivery
     },
@@ -77,8 +89,8 @@ export default function NewOrder() {
   // Create order mutation
   const createOrderMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      // Convert date and time to ISO string
-      const dateTime = new Date(`${data.date}T${data.time}`);
+      // Convert date and times to ISO string for the base dateTime
+      const dateTime = new Date(`${data.date}T${data.timeFrom}`);
       
       // Prepare order items
       const items = Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
@@ -101,6 +113,8 @@ export default function NewOrder() {
           to: data.pickup ? "Самовывоз" : data.to,
           address: data.pickup ? "Магазин" : data.address,
           dateTime: dateTime.toISOString(),
+          timeFrom: data.timeFrom,
+          timeTo: data.timeTo,
           notes: data.notes,
           pickup: data.pickup, // Include pickup field
         },
@@ -220,17 +234,34 @@ export default function NewOrder() {
               />
               
               <div>
-                <Label className="block text-sm font-medium text-gray-700 mb-1">
-                  Дата и время доставки
-                </Label>
-                <div className="grid grid-cols-2 gap-3">
+              <Label className="block text-sm font-medium text-gray-700 mb-1">
+                Дата и время доставки
+              </Label>
+              <div className="grid grid-cols-3 gap-3">
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                              
                   <FormField
                     control={form.control}
-                    name="date"
+                    name="timeFrom"
                     render={({ field }) => (
                       <FormItem>
+                        <FormLabel className="sr-only">С</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <div className="flex items-center">
+                            <span className="text-sm text-gray-500 mr-2">С</span>
+                            <Input type="time" {...field} />
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -239,11 +270,15 @@ export default function NewOrder() {
                   
                   <FormField
                     control={form.control}
-                    name="time"
+                    name="timeTo"
                     render={({ field }) => (
                       <FormItem>
+                        <FormLabel className="sr-only">До</FormLabel>
                         <FormControl>
-                          <Input type="time" {...field} />
+                          <div className="flex items-center">
+                            <span className="text-sm text-gray-500 mr-2">До</span>
+                            <Input type="time" {...field} />
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -251,7 +286,7 @@ export default function NewOrder() {
                   />
                 </div>
               </div>
-              
+                            
               {/* Add pickup checkbox */}
               <FormField
                 control={form.control}

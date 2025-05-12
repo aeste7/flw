@@ -30,8 +30,10 @@ export default function EditOrder() {
     to: '',
     address: '',
     dateTime: '',
+    timeFrom: '',
+    timeTo: '',
     notes: '',
-    pickup: false, // Add pickup field
+    pickup: false,
   });
   
   // Query for the order
@@ -117,27 +119,20 @@ export default function EditOrder() {
           const year = dateObj.getFullYear();
           const month = String(dateObj.getMonth() + 1).padStart(2, '0');
           const day = String(dateObj.getDate()).padStart(2, '0');
-          const hours = String(dateObj.getHours()).padStart(2, '0');
-          const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+          //const hours = String(dateObj.getHours()).padStart(2, '0');
+          //const minutes = String(dateObj.getMinutes()).padStart(2, '0');
           
-          const localDateStr = `${year}-${month}-${day}T${hours}:${minutes}`;
-          
-          console.log("Setting form data:", {
-            from: order.from,
-            to: order.to,
-            address: order.address,
-            dateTime: localDateStr,
-            notes: order.notes || '',
-            pickup: order.pickup || false, // Set pickup value
-          });
+          const localDateStr = `${year}-${month}-${day}`;
           
           setFormData({
             from: order.from,
             to: order.to,
             address: order.address,
             dateTime: localDateStr,
+            timeFrom: order.timeFrom || '',
+            timeTo: order.timeTo || '',
             notes: order.notes || '',
-            pickup: order.pickup || false, // Set pickup value
+            pickup: order.pickup || false,
           });
         } else {
           // Handle invalid date
@@ -148,27 +143,18 @@ export default function EditOrder() {
           const year = now.getFullYear();
           const month = String(now.getMonth() + 1).padStart(2, '0');
           const day = String(now.getDate()).padStart(2, '0');
-          const hours = String(now.getHours()).padStart(2, '0');
-          const minutes = String(now.getMinutes()).padStart(2, '0');
           
-          const localDateStr = `${year}-${month}-${day}T${hours}:${minutes}`;
-          
-          console.log("Setting form data:", {
-            from: order.from,
-            to: order.to,
-            address: order.address,
-            dateTime: localDateStr,
-            notes: order.notes || '',
-            pickup: order.pickup || false, // Set pickup value
-          });
+          const localDateStr = `${year}-${month}-${day}`;
           
           setFormData({
             from: order.from,
             to: order.to,
             address: order.address,
             dateTime: localDateStr,
+            timeFrom: order.timeFrom || '',
+            timeTo: order.timeTo || '',
             notes: order.notes || '',
-            pickup: order.pickup || false, // Set pickup value
+            pickup: order.pickup || false,
           });
           
           toast({
@@ -185,25 +171,18 @@ export default function EditOrder() {
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
+
         
-        const localDateStr = `${year}-${month}-${day}T${hours}:${minutes}`;
+        const localDateStr = `${year}-${month}-${day}`;
         
-        console.log("Setting form data:", {
-          from: order.from,
-          to: order.to,
-          address: order.address,
-          dateTime: localDateStr,
-          notes: order.notes || '',
-          pickup: order.pickup || false, // Set pickup value
-        });
-        
+       
         setFormData({
           from: order.from,
           to: order.to,
           address: order.address,
           dateTime: localDateStr,
+          timeFrom: order.timeFrom || '',
+          timeTo: order.timeTo || '',
           notes: order.notes || '',
           pickup: order.pickup || false, // Set pickup value
         });
@@ -342,6 +321,8 @@ useEffect(() => {
         to: formData.pickup ? "Самовывоз" : formData.to, // Use "Самовывоз" for pickup orders
         address: formData.pickup ? "Магазин" : formData.address, // Use "Магазин" for pickup orders
         dateTime: dateTime.toISOString(),
+        timeFrom: formData.timeFrom,
+        timeTo: formData.timeTo,
         notes: formData.notes || null,
         pickup: formData.pickup, // Include pickup field
       },
@@ -426,15 +407,41 @@ useEffect(() => {
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="dateTime">Дата и время</Label>
+          <Label htmlFor="dateTime">Дата доставки</Label>
           <Input
             id="dateTime"
             name="dateTime"
-            type="datetime-local"
+            type="date"
             value={formData.dateTime}
             onChange={handleInputChange}
             required
           />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="timeFrom">Время с</Label>
+            <Input
+              id="timeFrom"
+              name="timeFrom"
+              type="time"
+              value={formData.timeFrom}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="timeTo">Время до</Label>
+            <Input
+              id="timeTo"
+              name="timeTo"
+              type="time"
+              value={formData.timeTo}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
         </div>
         
         {/* Add pickup checkbox */}

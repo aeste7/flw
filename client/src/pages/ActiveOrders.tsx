@@ -50,6 +50,8 @@ export default function ActiveOrders() {
     to: '',
     address: '',
     dateTime: '',
+    timeFrom: '',
+    timeTo: '',
     notes: '',
     pickup: false, // Add pickup field
   });
@@ -63,15 +65,17 @@ export default function ActiveOrders() {
   useEffect(() => {
     if (editOrder) {
       const dateObj = new Date(editOrder.dateTime);
-      const localDateStr = dateObj.toISOString().slice(0, 16); // Format: YYYY-MM-DDThh:mm
+      const localDateStr = dateObj.toISOString().split('T')[0]; // Format: YYYY-MM-DD
       
       setFormData({
         from: editOrder.from,
         to: editOrder.to,
         address: editOrder.address,
         dateTime: localDateStr,
+        timeFrom: editOrder.timeFrom || '',
+        timeTo: editOrder.timeTo || '',
         notes: editOrder.notes || '',
-        pickup: editOrder.pickup || false, // Set pickup value
+        pickup: editOrder.pickup || false,
       });
     }
   }, [editOrder]);
@@ -360,8 +364,9 @@ export default function ActiveOrders() {
     
     if (!editOrder) return;
     
-    const dateTime = new Date(formData.dateTime);
-    
+    // Create a date object from the date part
+    const dateObj = new Date(formData.dateTime);
+      
     // Prepare order items
     const items = Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
       const flower = flowers.find(f => f.id === flowerId);
@@ -386,16 +391,18 @@ export default function ActiveOrders() {
       data: {
         order: {
           from: formData.from,
-          to: formData.to,
-          address: formData.address,
-          dateTime: dateTime.toISOString(),
+          to: formData.pickup ? "Самовывоз" : formData.to,
+          address: formData.pickup ? "Магазин" : formData.address,
+          dateTime: dateObj.toISOString(),
+          timeFrom: formData.timeFrom,
+          timeTo: formData.timeTo,
           notes: formData.notes || null,
           pickup: formData.pickup,
         },
         items,
       }
     });
-  };
+    };
   
   // Format date time for display
   const formatDateTime = (dateTime: string | Date) => {
@@ -584,7 +591,14 @@ export default function ActiveOrders() {
                     <span>{viewOrder.address}</span>
                     
                     <span className="text-gray-500">Дата:</span>
-                    <span>{formatDateTime(viewOrder.dateTime)}</span>
+                    <span>{format(new Date(viewOrder.dateTime), "d MMMM yyyy")}</span>
+                    
+                    <span className="text-gray-500">Время:</span>
+                    <span>
+                      {viewOrder.timeFrom && viewOrder.timeTo 
+                        ? `${viewOrder.timeFrom} - ${viewOrder.timeTo}`
+                        : format(new Date(viewOrder.dateTime), "HH:mm")}
+                    </span>
                     
                     <span className="text-gray-500">Тип:</span>
                     <span>{viewOrder.pickup ? "Самовывоз" : "Доставка"}</span>
@@ -678,15 +692,41 @@ export default function ActiveOrders() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="dateTime">Дата и время</Label>
+                <Label htmlFor="dateTime">Дата</Label>
                 <Input
                   id="dateTime"
                   name="dateTime"
-                  type="datetime-local"
+                  type="date"
                   value={formData.dateTime}
                   onChange={handleInputChange}
                   required
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="timeFrom">Время с</Label>
+                  <Input
+                    id="timeFrom"
+                    name="timeFrom"
+                    type="time"
+                    value={formData.timeFrom}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="timeTo">Время до</Label>
+                  <Input
+                    id="timeTo"
+                    name="timeTo"
+                    type="time"
+                    value={formData.timeTo}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
               </div>
               
               {/* Add pickup checkbox to edit dialog */}

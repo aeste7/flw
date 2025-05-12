@@ -68,6 +68,8 @@ export const orders = pgTable("orders", {
   to: text("to").notNull(),
   address: text("address").notNull(),
   dateTime: timestamp("date_time").notNull(),
+  timeFrom: text("time_from"), // Start time of delivery period
+  timeTo: text("time_to"),     // End time of delivery period
   notes: text("notes"),
   status: text("status").notNull().default(OrderStatus.New),
   pickup: boolean("pickup").default(false).notNull(),

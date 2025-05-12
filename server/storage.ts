@@ -602,7 +602,10 @@ export class DatabaseStorage implements IStorage {
     // Process the update to ensure notes is properly handled
     const processedUpdate = {
       ...orderUpdate,
-      notes: orderUpdate.notes === undefined ? currentOrder.notes : orderUpdate.notes
+      notes: orderUpdate.notes === undefined ? currentOrder.notes : orderUpdate.notes,
+      // Handle the new time period fields
+      timeFrom: orderUpdate.timeFrom === undefined ? currentOrder.timeFrom : orderUpdate.timeFrom,
+      timeTo: orderUpdate.timeTo === undefined ? currentOrder.timeTo : orderUpdate.timeTo,
     };
     
     const [updatedOrder] = await db
@@ -613,7 +616,7 @@ export class DatabaseStorage implements IStorage {
     
     return updatedOrder || undefined;
   }
-
+ 
   async deleteOrder(id: number): Promise<boolean> {
     // Mark as deleted instead of removing
     const result = await this.updateOrderStatus(id, OrderStatus.Deleted);
