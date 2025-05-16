@@ -13,6 +13,8 @@ import Notes from "@/pages/Notes";
 import WriteOff from "@/pages/WriteOff";
 import Layout from "@/components/Layout";
 import { ThemeProvider } from "next-themes";
+import { useEffect } from "react";
+
 
 function Router() {
   return (
@@ -32,6 +34,11 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => {
+    // Set HTML lang attribute to force 24-hour time format
+    document.documentElement.lang = 'en-GB'; // Use a locale that defaults to 24h format
+  }, []);
+
   return (
     <ThemeProvider attribute="class" defaultTheme="light">
       <QueryClientProvider client={queryClient}>

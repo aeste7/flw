@@ -1,14 +1,23 @@
 import { useLocation } from "wouter";
 import { Home, PlusCircle, ListChecks, PackageOpen, FileText } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query"; // Add this import
 
 export default function BottomNavigation() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
+  const queryClient = useQueryClient(); // Add this hook
+  
+  // Create a custom navigation function for the warehouse page
+  const navigateToWarehouse = async () => {
+    // Force refetch flowers data before navigation
+    await queryClient.refetchQueries({ queryKey: ['/api/flowers'] });
+    navigate("/warehouse");
+  };
   
   const navItems = [
     { name: "Домашняя", icon: <Home className="h-6 w-6" />, path: "/" },
     { name: "Новый заказ", icon: <PlusCircle className="h-6 w-6" />, path: "/new-order" },
     { name: "Активные заказы", icon: <ListChecks className="h-6 w-6" />, path: "/active-orders" },
-    { name: "Склад", icon: <PackageOpen className="h-6 w-6" />, path: "/warehouse" },
+    { name: "Склад", icon: <PackageOpen className="h-6 w-6" />, path: "/warehouse", customNavigate: navigateToWarehouse },
     { name: "Заметки", icon: <FileText className="h-6 w-6" />, path: "/notes" },
   ];
   
@@ -18,9 +27,15 @@ export default function BottomNavigation() {
         {navItems.map((item) => (
           <button
             key={item.name}
-            onClick={() => navigate(item.path)}
+            onClick={() => {
+              if (item.customNavigate) {
+                item.customNavigate();
+              } else {
+                navigate(item.path);
+              }
+            }}
             className={`flex flex-col items-center justify-center py-3 ${
-              item.path === "/" ? "text-blue-600" : "text-gray-500 hover:text-blue-600"
+              location === item.path ? "text-blue-600" : "text-gray-500 hover:text-blue-600"
             }`}
           >
             {item.icon}

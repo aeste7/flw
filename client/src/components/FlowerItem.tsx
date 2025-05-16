@@ -170,36 +170,28 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
     setShowWriteOffModal(false);
   };
 
-  // Handle write-off all
-  const handleWriteOffAll = () => {
-    setShowContextMenu(false);
-    console.log("Writing off all flowers:", flower);
+// Handle write-off all
+const handleWriteOffAll = () => {
+  setShowContextMenu(false);
+  console.log("Writing off all flowers:", flower);
+  
+  // If amount is 0, skip the writeoff record and just delete the flower
+  if (flower.amount === 0) {
+    console.log("Amount is 0, skipping writeoff record and deleting flower directly");
     
-    if (flower.amount > 0) {
-      // First, create a writeoff record for the flowers
-      console.log("Creating writeoff record for", flower.amount, "flowers");
-      
-      apiRequest('POST', '/api/writeoffs', { 
-        flower: flower.flower,
-        amount: flower.amount
-      }).then((response) => {
-        console.log("Writeoff response:", response);
-        
-        // Then delete the flower from inventory
-        console.log("Attempting to delete flower with ID:", flower.id);
-        return apiRequest('DELETE', `/api/flowers/${flower.id}`);
-      }).then((response) => {
+    apiRequest('DELETE', `/api/flowers/${flower.id}`)
+      .then((response) => {
         console.log("Delete response:", response);
         
         queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/writeoffs'] });
         
         toast({
           title: "Успешно",
           description: "Цветы были полностью удалены из инвентаря",
         });
-      }).catch(error => {
-        console.error("Error in handleWriteOffAll:", error);
+      })
+      .catch(error => {
+        console.error("Error deleting flower:", error);
         
         toast({
           title: "Ошибка",
@@ -207,10 +199,41 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
           variant: "destructive",
         });
       });
-    } else {
-      console.log("No flowers to write off (amount is 0)");
-    }
-  };
+  } else {
+    // If amount > 0, create a writeoff record first, then delete the flower
+    console.log("Creating writeoff record for", flower.amount, "flowers");
+    
+    apiRequest('POST', '/api/writeoffs', { 
+      flower: flower.flower,
+      amount: flower.amount
+    }).then((response) => {
+      console.log("Writeoff response:", response);
+      
+      // Then delete the flower from inventory
+      console.log("Attempting to delete flower with ID:", flower.id);
+      return apiRequest('DELETE', `/api/flowers/${flower.id}`);
+    }).then((response) => {
+      console.log("Delete response:", response);
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/writeoffs'] });
+      
+      toast({
+        title: "Успешно",
+        description: "Цветы были полностью удалены из инвентаря",
+      });
+    }).catch(error => {
+      console.error("Error in handleWriteOffAll:", error);
+      
+      toast({
+        title: "Ошибка",
+        description: `Не удалось удалить цветы: ${error.message}`,
+        variant: "destructive",
+      });
+    });
+  }
+};
+
 
 
 
@@ -282,10 +305,10 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
               variant="ghost" 
               className="w-full text-left py-3 px-4 justify-start rounded-none text-red-500"
               onClick={handleWriteOffAll}
-              disabled={flower.amount === 0 || writeoffMutation.isPending}
+              // disabled={flower.amount === 0 || writeoffMutation.isPending}
             >
               <Trash2 className="h-5 w-5 text-red-500 mr-3" />
-              <span>Списать всё</span>
+              <span>Удалить</span>
             </Button>
           </div>
           

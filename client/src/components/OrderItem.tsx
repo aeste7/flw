@@ -42,9 +42,10 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
     } else {
       // Fallback to the time from dateTime
       const date = new Date(order.dateTime);
-      return format(date, "h:mm a");
+      return format(date, "HH:mm"); // Use HH for 24-hour format
     }
   };
+
   
   // Update order status mutation
   const updateStatusMutation = useMutation({
@@ -66,6 +67,71 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
       });
     }
   });
+
+  
+  // Add this mutation for deleting an order
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (orderId: number) => {
+      try {
+        // First, get the order items to know what to return to inventory
+        const itemsResponse = await apiRequest('GET', `/api/orders/${orderId}/items`);
+        let orderItems = [];
+        
+        // Parse the response if needed
+        if (itemsResponse instanceof Response) {
+          orderItems = await itemsResponse.json();
+        } else {
+          orderItems = itemsResponse;
+        }
+        
+        console.log("Order items to return to inventory:", orderItems);
+        
+        // Delete the order
+        await apiRequest('DELETE', `/api/orders/${orderId}`);
+        
+        // Return flowers to inventory
+        if (orderItems && Array.isArray(orderItems) && orderItems.length > 0) {
+          // Process each order item
+          for (const item of orderItems) {
+            // Use the same endpoint that's used in Warehouse.tsx for adding flowers
+            await apiRequest('POST', '/api/flowers', {
+              flower: item.flower,
+              amount: item.amount
+            });
+            
+            console.log(`Returned ${item.amount} of ${item.flower} to inventory`);
+          }
+        }
+        
+        return orderId;
+      } catch (error) {
+        console.error("Error in deleteOrderMutation:", error);
+        throw error;
+      }
+    },
+    onSuccess: (orderId) => {
+      // Invalidate and refetch both queries
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
+      
+      // Force refetch the flowers data
+      queryClient.refetchQueries({ queryKey: ['/api/flowers'] });
+      
+      toast({
+        title: "Заказ удален",
+        description: "Заказ был успешно удален и цветы возвращены на склад",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Ошибка",
+        description: `Не удалось удалить заказ: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+
   
   // Handle status change
   const handleStatusChange = (status: string) => {
@@ -153,7 +219,11 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
                   )}
                   {onDelete && (
                     <DropdownMenuItem 
-                      onClick={onDelete}
+                      onClick={() => {
+                        if (order.id) {
+                          deleteOrderMutation.mutate(order.id);
+                        }
+                      }}
                       className="text-red-600 focus:text-red-600"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />

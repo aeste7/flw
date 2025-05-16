@@ -57,3 +57,20 @@
   }
 }
 
+
+/* Force 24-hour time format */
+.time-input::-webkit-datetime-edit-ampm-field {
+  display: none;
+}
+
+/* For Firefox */
+input[type="time"].time-input {
+  -moz-appearance: textfield;
+}
+
+/* For all browsers - enforce 24h format */
+input[type="time"].time-input {
+  --webkit-appearance: none;
+  -moz-appearance: textfield;
+}
+

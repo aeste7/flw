@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Order, OrderItem as OrderItemType, Warehouse } from "@shared/schema";
@@ -21,6 +21,12 @@ export default function EditOrder() {
   const queryClient = useQueryClient();
   const orderId = params?.id ? parseInt(params.id) : null;
   const [selectedFlowers, setSelectedFlowers] = useState<Map<number, number>>(new Map());
+
+  const timeFromRef = useRef<HTMLInputElement>(null);
+  const timeToRef = useRef<HTMLInputElement>(null);
+
+  // Add this state to track projected inventory changes
+  const [projectedInventory, setProjectedInventory] = useState<Map<number, number>>(new Map());
 
   console.log("Route match:", match, "Params:", params, "Order ID:", orderId);
   
@@ -191,47 +197,224 @@ export default function EditOrder() {
   }, [order, toast]);
   
   // Set selected flowers when order items are loaded
-// In the query for order items, add more detailed logging
+  useEffect(() => {
+    // ... existing effect code
+  }, [orderItems, flowers]);
 
-
-// In the useEffect for setting selected flowers, add more detailed logging
-useEffect(() => {
-  console.log("Order items or flowers changed:", { 
-    orderItems, 
-    orderItemsLength: orderItems?.length || 0,
-    flowers, 
-    flowersLength: flowers?.length || 0 
-  });
-  
-  if (orderItems && orderItems.length > 0 && flowers.length > 0) {
-    // Initialize the selectedFlowers map from the order items
-    const newSelectedFlowers = new Map<number, number>();
-    
-    orderItems.forEach((item: OrderItemType) => {
-      // Find the flower in the available flowers
-      console.log("Processing item:", item);
-      const flower = flowers.find(f => f.flower === item.flower);
-      console.log("Found flower:", flower);
+  // Add this effect to handle the time input formatting
+  useEffect(() => {
+    const setupTimeInput = (inputElement: HTMLInputElement | null) => {
+      if (!inputElement) return;
       
-      if (flower) {
-        newSelectedFlowers.set(flower.id, item.amount);
-      } else {
-        console.warn(`Flower not found for item: ${item.flower}`);
-      }
+      inputElement.classList.add('time-input');
+      
+      const handleTimeInput = (e: Event) => {
+        const input = e.target as HTMLInputElement;
+        const cursorPosition = input.selectionStart || 0;
+        let value = input.value.replace(/[^0-9:]/g, "");
+        
+        // If there's already a colon in the input
+        if (value.includes(':')) {
+          const [hours, minutes] = value.split(':');
+          
+          // Validate hours (0-23)
+          let formattedHours = hours;
+          if (parseInt(hours) > 23) formattedHours = '23';
+          
+          // Validate minutes (0-59)
+          let formattedMinutes = minutes;
+          if (minutes.length > 0 && parseInt(minutes) > 59) formattedMinutes = '59';
+          
+          // Combine hours and minutes
+          input.value = `${formattedHours}:${formattedMinutes}`;
+          
+          // Restore cursor position
+          const newPosition = cursorPosition + (input.value.length - value.length);
+          input.setSelectionRange(newPosition, newPosition);
+          return;
+        }
+        
+        // If no colon yet, but we have at least 2 digits, add a colon
+        if (value.length >= 2) {
+          // Validate hours
+          let hours = value.substring(0, 2);
+          if (parseInt(hours) > 23) hours = '23';
+          
+          // Format with colon
+          if (value.length === 2) {
+            input.value = `${hours}:`;
+          } else {
+            // We have minutes too
+            let minutes = value.substring(2);
+            if (minutes.length > 0 && parseInt(minutes) > 59) minutes = '59';
+            input.value = `${hours}:${minutes}`;
+          }
+          
+          // Restore cursor position, accounting for the added colon
+          const newPosition = cursorPosition + (input.value.length - value.length);
+          input.setSelectionRange(newPosition, newPosition);
+        } else {
+          // Just 1 digit, no formatting needed yet
+          input.value = value;
+        }
+      };
+      
+      const handleBlur = (e: Event) => {
+        const input = e.target as HTMLInputElement;
+        let value = input.value.trim();
+        
+        // If empty, leave it empty
+        if (!value) return;
+        
+        // If only has hours (e.g., "14:")
+        if (value.endsWith(':')) {
+          value = value.slice(0, -1) + ":00";
+        }
+        
+        // If only has hours without colon (e.g., "14")
+        if (!value.includes(':') && value.length <= 2) {
+          value = value.padStart(2, '0') + ":00";
+        }
+        
+        // If has hours and minutes
+        if (value.includes(':')) {
+          const [hours, minutes] = value.split(':');
+          const formattedHours = hours.padStart(2, '0');
+          const formattedMinutes = (minutes || '00').padStart(2, '0');
+          value = `${formattedHours}:${formattedMinutes}`;
+        }
+        
+        input.value = value;
+        
+        // Update the form state to ensure the formatted value is saved
+        const name = input.name;
+        setFormData(prev => ({
+          ...prev,
+          [name]: value
+        }));
+      };
+      
+      inputElement.addEventListener("input", handleTimeInput);
+      inputElement.addEventListener("blur", handleBlur);
+      
+      // Return cleanup function
+      return () => {
+        inputElement.removeEventListener("input", handleTimeInput);
+        inputElement.removeEventListener("blur", handleBlur);
+      };
+    };
+    
+    // Setup both time inputs
+    const cleanupTimeFrom = setupTimeInput(timeFromRef.current);
+    const cleanupTimeTo = setupTimeInput(timeToRef.current);
+    
+    return () => {
+      if (cleanupTimeFrom) cleanupTimeFrom();
+      if (cleanupTimeTo) cleanupTimeTo();
+    };
+  }, []);
+
+  // In the useEffect for setting selected flowers, add more detailed logging
+  useEffect(() => {
+    console.log("Order items or flowers changed:", { 
+      orderItems, 
+      orderItemsLength: orderItems?.length || 0,
+      flowers, 
+      flowersLength: flowers?.length || 0 
     });
     
-    console.log("Setting selected flowers:", newSelectedFlowers);
-    setSelectedFlowers(newSelectedFlowers);
+    if (orderItems && orderItems.length > 0 && flowers.length > 0) {
+      // Initialize the selectedFlowers map from the order items
+      const newSelectedFlowers = new Map<number, number>();
+      
+      orderItems.forEach((item: OrderItemType) => {
+        // Find the flower in the available flowers
+        console.log("Processing item:", item);
+        const flower = flowers.find(f => f.flower === item.flower);
+        console.log("Found flower:", flower);
+        
+        if (flower) {
+          newSelectedFlowers.set(flower.id, item.amount);
+        } else {
+          console.warn(`Flower not found for item: ${item.flower}`);
+        }
+      });
+      
+      console.log("Setting selected flowers:", newSelectedFlowers);
+      setSelectedFlowers(newSelectedFlowers);
+    } else {
+      console.log("Not setting selected flowers because:", {
+        orderItemsExist: !!orderItems,
+        orderItemsLength: orderItems?.length || 0,
+        flowersExist: !!flowers,
+        flowersLength: flowers?.length || 0
+      });
+    }
+  }, [orderItems, flowers]);
+
+  
+// Add this useEffect to calculate projected inventory whenever selectedFlowers changes
+// Add this useEffect to calculate projected inventory whenever selectedFlowers changes
+useEffect(() => {
+  if (!orderItems || orderItems.length === 0 || !flowers || !Array.isArray(flowers) || flowers.length === 0) {
+    return;
+  }
+
+  // Create a map of original flower quantities from order items
+  const originalFlowerQuantities = new Map<string, number>();
+  orderItems.forEach(item => {
+    originalFlowerQuantities.set(item.flower, item.amount);
+  });
+
+  // Create a map of current flower IDs to their names
+  const flowerIdToName = new Map<number, string>();
+  const flowerNameToId = new Map<string, number>();
+  
+  // Make sure flowers is an array before using forEach
+  if (Array.isArray(flowers)) {
+    flowers.forEach(flower => {
+      flowerIdToName.set(flower.id, flower.flower);
+      flowerNameToId.set(flower.flower, flower.id);
+    });
   } else {
-    console.log("Not setting selected flowers because:", {
-      orderItemsExist: !!orderItems,
-      orderItemsLength: orderItems?.length || 0,
-      flowersExist: !!flowers,
-      flowersLength: flowers?.length || 0
+    console.error("flowers is not an array:", flowers);
+    return; // Exit early if flowers is not an array
+  }
+
+  // Calculate projected inventory
+  const newProjectedInventory = new Map<number, number>();
+  
+  // Start with current inventory
+  if (Array.isArray(flowers)) {
+    flowers.forEach(flower => {
+      newProjectedInventory.set(flower.id, flower.amount);
     });
   }
-}, [orderItems, flowers]);
 
+  // Return original quantities to inventory (add back)
+  originalFlowerQuantities.forEach((amount, flowerName) => {
+    const flowerId = flowerNameToId.get(flowerName);
+    if (flowerId !== undefined) {
+      const currentAmount = newProjectedInventory.get(flowerId) || 0;
+      newProjectedInventory.set(flowerId, currentAmount + amount);
+    }
+  });
+
+  // Subtract new quantities from inventory
+  selectedFlowers.forEach((amount, flowerId) => {
+    const currentAmount = newProjectedInventory.get(flowerId) || 0;
+    newProjectedInventory.set(flowerId, currentAmount - amount);
+  });
+
+  setProjectedInventory(newProjectedInventory);
+}, [selectedFlowers, orderItems, flowers]);
+
+// Create a custom navigation function
+const navigateToWarehouse = async () => {
+  // Force refetch flowers data before navigation
+  await queryClient.refetchQueries({ queryKey: ['/api/flowers'] });
+  navigate("/warehouse");
+};
   
   // Handle flower selection
   const handleSelectFlower = (flowerId: number, amount: number) => {
@@ -264,19 +447,63 @@ useEffect(() => {
     });
   };
   
-  // Update order mutation
+  
+  // Update the updateOrderMutation to properly handle the async operations
   const updateOrderMutation = useMutation({
     mutationFn: async (data: any) => {
       if (!orderId) throw new Error("Order ID is required");
-      return await apiRequest('PUT', `/api/orders/${orderId}`, data);
+      
+      // First update the order
+      const orderResponse = await apiRequest('PUT', `/api/orders/${orderId}`, data);
+      
+      // Then handle inventory adjustments
+      if (data.inventoryAdjustments && data.inventoryAdjustments.length > 0) {
+        // Process each adjustment
+        for (const adjustment of data.inventoryAdjustments) {
+          // Find the flower in the warehouse
+          const flowerToAdjust = Array.isArray(flowers) 
+            ? flowers.find(f => f.flower === adjustment.flower)
+            : undefined;
+          
+          if (flowerToAdjust) {
+            // Calculate new amount
+            let newAmount = flowerToAdjust.amount;
+            
+            if (adjustment.action === 'return') {
+              // Return flowers to inventory
+              newAmount += adjustment.amount;
+            } else if (adjustment.action === 'take') {
+              // Take flowers from inventory
+              newAmount = Math.max(0, newAmount - adjustment.amount);
+            }
+            
+            // Update flower inventory
+            await apiRequest('PUT', `/api/flowers/${flowerToAdjust.id}`, {
+              amount: newAmount
+            });
+          }
+        }
+      }
+      
+      return orderResponse;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+    onSuccess: async () => {
+      // Invalidate queries
+      await queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      
+      // Force refetch the flowers data to ensure it's up to date
+      await queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/flowers'] });
+      
       toast({
         title: "Обновление заказа",
         description: "Заказ был успешно обновлён",
       });
-      navigate("/active-orders");
+      
+      // Add a small delay to ensure data is refreshed before navigation
+      setTimeout(() => {
+        navigate("/active-orders");
+      }, 500);
     },
     onError: (error) => {
       toast({
@@ -288,21 +515,107 @@ useEffect(() => {
     }
   });
   
+  
+
+  
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!orderId) return;
     
+    // Check if any projected inventory is negative
+    let hasNegativeInventory = false;
+    projectedInventory.forEach((amount, flowerId) => {
+      if (amount < 0) {
+        hasNegativeInventory = true;
+        const flower = flowers.find(f => f.id === flowerId);
+        toast({
+          title: "Ошибка",
+          description: `Недостаточно цветов: ${flower?.flower}`,
+          variant: "destructive",
+        });
+      }
+    });
+    
+    if (hasNegativeInventory) {
+      return;
+    }
+    
     const dateTime = new Date(formData.dateTime);
     
-    // Prepare order items
+    // Create a map of the original order items for comparison
+    const originalOrderItems = new Map<string, number>();
+    orderItems.forEach(item => {
+      originalOrderItems.set(item.flower, item.amount);
+    });
+    
+    // Prepare order items and track changes for inventory updates
     const items = Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
       const flower = flowers.find(f => f.id === flowerId);
+      const flowerName = flower?.flower || "";
       return {
-        flower: flower?.flower || "",
+        flower: flowerName,
         amount,
       };
+    });
+    
+    // Calculate inventory adjustments
+    const inventoryAdjustments = [];
+    
+    // Check for reduced quantities (return to inventory)
+    originalOrderItems.forEach((originalAmount, flowerName) => {
+      const updatedItem = items.find(item => item.flower === flowerName);
+      const updatedAmount = updatedItem ? updatedItem.amount : 0;
+      
+      if (updatedAmount < originalAmount) {
+        // Flower quantity was reduced, return to inventory
+        const returnAmount = originalAmount - updatedAmount;
+        inventoryAdjustments.push({
+          flower: flowerName,
+          amount: returnAmount,
+          action: 'return'
+        });
+      }
+    });
+    
+    // Check for increased quantities (take from inventory)
+    items.forEach(item => {
+      const originalAmount = originalOrderItems.get(item.flower) || 0;
+      
+      if (item.amount > originalAmount) {
+        // Flower quantity was increased, take from inventory
+        const takeAmount = item.amount - originalAmount;
+        inventoryAdjustments.push({
+          flower: item.flower,
+          amount: takeAmount,
+          action: 'take'
+        });
+      }
+    });
+    
+    // Check for new flowers (take from inventory)
+    items.forEach(item => {
+      if (!originalOrderItems.has(item.flower)) {
+        // New flower added to order, take from inventory
+        inventoryAdjustments.push({
+          flower: item.flower,
+          amount: item.amount,
+          action: 'take'
+        });
+      }
+    });
+    
+    // Check for removed flowers (return to inventory)
+    originalOrderItems.forEach((amount, flowerName) => {
+      if (!items.some(item => item.flower === flowerName)) {
+        // Flower removed from order, return to inventory
+        inventoryAdjustments.push({
+          flower: flowerName,
+          amount,
+          action: 'return'
+        });
+      }
     });
     
     // Check if any flowers are selected
@@ -318,18 +631,20 @@ useEffect(() => {
     updateOrderMutation.mutate({
       order: {
         from: formData.from,
-        to: formData.pickup ? "Самовывоз" : formData.to, // Use "Самовывоз" for pickup orders
-        address: formData.pickup ? "Магазин" : formData.address, // Use "Магазин" for pickup orders
+        to: formData.pickup ? "Самовывоз" : formData.to,
+        address: formData.pickup ? "Магазин" : formData.address,
         dateTime: dateTime.toISOString(),
         timeFrom: formData.timeFrom,
         timeTo: formData.timeTo,
         notes: formData.notes || null,
-        pickup: formData.pickup, // Include pickup field
+        pickup: formData.pickup,
       },
       items,
+      inventoryAdjustments, // Pass inventory adjustments to the backend
     });
   };
-  
+
+
   // Handle cancel
   const handleCancel = () => {
     navigate("/active-orders");
@@ -424,9 +739,13 @@ useEffect(() => {
             <Input
               id="timeFrom"
               name="timeFrom"
-              type="time"
+              type="text" // Change to text for custom handling
               value={formData.timeFrom}
               onChange={handleInputChange}
+              ref={timeFromRef}
+              className="time-input"
+              placeholder="HH:MM"
+              maxLength={5}
               required
             />
           </div>
@@ -436,9 +755,13 @@ useEffect(() => {
             <Input
               id="timeTo"
               name="timeTo"
-              type="time"
+              type="text" // Change to text for custom handling
               value={formData.timeTo}
               onChange={handleInputChange}
+              ref={timeToRef}
+              className="time-input"
+              placeholder="HH:MM"
+              maxLength={5}
               required
             />
           </div>
@@ -482,6 +805,7 @@ useEffect(() => {
               flowers={flowers}
               selectedFlowers={selectedFlowers}
               onSelectFlower={handleSelectFlower}
+              projectedInventory={projectedInventory} 
             />
           )}
           {selectedFlowers.size > 0 && (
@@ -489,17 +813,21 @@ useEffect(() => {
               <CardContent className="p-4">
                 <h4 className="text-sm font-medium mb-2">Выбранные цветы</h4>
                 <ul className="space-y-2">
-                  {Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
-                    const flower = flowers.find(f => f.id === flowerId);
-                    return (
-                      <li key={flowerId} className="text-sm">
-                        <div className="flex justify-between">
-                          <span>{flower?.flower}</span>
-                          <span>{amount} шт.</span>
-                        </div>
-                      </li>
-                    );
-                  })}
+                {Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
+                  // Add a check to ensure flowers is an array before using find
+                  const flower = Array.isArray(flowers) 
+                    ? flowers.find(f => f.id === flowerId) 
+                    : undefined;
+                  
+                  return (
+                    <li key={flowerId} className="text-sm">
+                      <div className="flex justify-between">
+                        <span>{flower?.flower || `Flower ID: ${flowerId}`}</span>
+                        <span>{amount} шт.</span>
+                      </div>
+                    </li>
+                  );
+                })}
                 </ul>
               </CardContent>
             </Card>

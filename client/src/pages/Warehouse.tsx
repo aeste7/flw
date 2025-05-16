@@ -237,6 +237,10 @@ export default function Warehouse() {
                   </div>
                 </div>
               ))
+            ) : !flowers || !Array.isArray(flowers) ? (
+              <div className="p-6 text-center text-gray-500">
+                Ошибка данных. Пожалуйста, обновите страницу.
+              </div>
             ) : flowers.length === 0 ? (
               <div className="p-6 text-center text-gray-500">
                 Нет доступных, добавьте новые цветы.
@@ -248,6 +252,7 @@ export default function Warehouse() {
             )}
           </div>
         </TabsContent>
+
         
         {/* Write Off Tab */}
         <TabsContent value="writeoff" className="space-y-4">

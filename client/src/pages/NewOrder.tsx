@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,9 @@ export default function NewOrder() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, navigate] = useLocation();
+
+  const timeFromRef = useRef<HTMLInputElement>(null);
+  const timeToRef = useRef<HTMLInputElement>(null);
   
   // Fetch available flowers
   const { data: flowers = [], isLoading } = useQuery<Warehouse[]>({
@@ -143,6 +146,162 @@ export default function NewOrder() {
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     createOrderMutation.mutate(values);
   };
+
+    
+// Add this effect to handle the time input formatting
+useEffect(() => {
+  const setupTimeInput = (inputElement: HTMLInputElement | null) => {
+    if (!inputElement) return;
+    
+    inputElement.classList.add('time-input');
+    
+    const handleTimeInput = (e: Event) => {
+      const input = e.target as HTMLInputElement;
+      const cursorPosition = input.selectionStart || 0;
+      let value = input.value.replace(/[^0-9:]/g, "");
+      
+      // If there's already a colon in the input
+      if (value.includes(':')) {
+        const [hours, minutes] = value.split(':');
+        
+        // Validate hours (0-23)
+        let formattedHours = hours;
+        if (parseInt(hours) > 23) formattedHours = '23';
+        
+        // Validate minutes (0-59)
+        let formattedMinutes = minutes;
+        if (minutes.length > 0 && parseInt(minutes) > 59) formattedMinutes = '59';
+        
+        // Combine hours and minutes
+        input.value = `${formattedHours}:${formattedMinutes}`;
+        
+        // Restore cursor position
+        const newPosition = cursorPosition + (input.value.length - value.length);
+        input.setSelectionRange(newPosition, newPosition);
+        
+        // Update React form state
+        const fieldName = input.name;
+        const fieldValue = input.value;
+        
+        // Use form.setValue to update the form state
+        if (fieldName === 'timeFrom' || fieldName === 'timeTo') {
+          form.setValue(fieldName as any, fieldValue, { 
+            shouldValidate: true,
+            shouldDirty: true
+          });
+        }
+        
+        return;
+      }
+      
+      // If no colon yet, but we have at least 2 digits, add a colon
+      if (value.length >= 2) {
+        // Validate hours
+        let hours = value.substring(0, 2);
+        if (parseInt(hours) > 23) hours = '23';
+        
+        // Format with colon
+        if (value.length === 2) {
+          input.value = `${hours}:`;
+        } else {
+          // We have minutes too
+          let minutes = value.substring(2);
+          if (minutes.length > 0 && parseInt(minutes) > 59) minutes = '59';
+          input.value = `${hours}:${minutes}`;
+        }
+        
+        // Restore cursor position, accounting for the added colon
+        const newPosition = cursorPosition + (input.value.length - value.length);
+        input.setSelectionRange(newPosition, newPosition);
+        
+        // Update React form state
+        const fieldName = input.name;
+        const fieldValue = input.value;
+        
+        // Use form.setValue to update the form state
+        if (fieldName === 'timeFrom' || fieldName === 'timeTo') {
+          form.setValue(fieldName as any, fieldValue, { 
+            shouldValidate: true,
+            shouldDirty: true
+          });
+        }
+      } else {
+        // Just 1 digit, no formatting needed yet
+        input.value = value;
+        
+        // Update React form state
+        const fieldName = input.name;
+        const fieldValue = input.value;
+        
+        // Use form.setValue to update the form state
+        if (fieldName === 'timeFrom' || fieldName === 'timeTo') {
+          form.setValue(fieldName as any, fieldValue, { 
+            shouldValidate: true,
+            shouldDirty: true
+          });
+        }
+      }
+    };
+    
+    const handleBlur = (e: Event) => {
+      const input = e.target as HTMLInputElement;
+      let value = input.value.trim();
+      
+      // If empty, leave it empty
+      if (!value) return;
+      
+      // If only has hours (e.g., "14:")
+      if (value.endsWith(':')) {
+        value = value.slice(0, -1) + ":00";
+      }
+      
+      // If only has hours without colon (e.g., "14")
+      if (!value.includes(':') && value.length <= 2) {
+        value = value.padStart(2, '0') + ":00";
+      }
+      
+      // If has hours and minutes
+      if (value.includes(':')) {
+        const [hours, minutes] = value.split(':');
+        const formattedHours = hours.padStart(2, '0');
+        const formattedMinutes = (minutes || '00').padStart(2, '0');
+        value = `${formattedHours}:${formattedMinutes}`;
+      }
+      
+      input.value = value;
+      
+      // Update React form state
+      const fieldName = input.name;
+      
+      // Use form.setValue to update the form state
+      if (fieldName === 'timeFrom' || fieldName === 'timeTo') {
+        form.setValue(fieldName as any, value, { 
+          shouldValidate: true,
+          shouldDirty: true
+        });
+      }
+    };
+    
+    inputElement.addEventListener("input", handleTimeInput);
+    inputElement.addEventListener("blur", handleBlur);
+    
+    // Return cleanup function
+    return () => {
+      inputElement.removeEventListener("input", handleTimeInput);
+      inputElement.removeEventListener("blur", handleBlur);
+    };
+  };
+  
+  // Setup both time inputs
+  const cleanupTimeFrom = setupTimeInput(timeFromRef.current);
+  const cleanupTimeTo = setupTimeInput(timeToRef.current);
+  
+  return () => {
+    if (cleanupTimeFrom) cleanupTimeFrom();
+    if (cleanupTimeTo) cleanupTimeTo();
+  };
+}, [form]); // Add form to the dependency array
+
   
   return (
     <section className="max-w-3xl mx-auto p-4">
@@ -251,39 +410,55 @@ export default function NewOrder() {
                   )}
                 />
                               
-                  <FormField
-                    control={form.control}
-                    name="timeFrom"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="sr-only">С</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center">
-                            <span className="text-sm text-gray-500 mr-2">С</span>
-                            <Input type="time" {...field} />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="timeTo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="sr-only">До</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center">
-                            <span className="text-sm text-gray-500 mr-2">До</span>
-                            <Input type="time" {...field} />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <FormField
+                  control={form.control}
+                  name="timeFrom"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="sr-only">С</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center">
+                          <span className="text-sm text-gray-500 mr-2">С</span>
+                          <Input 
+                            type="text" // Change to text for custom handling
+                            {...field} 
+                            ref={timeFromRef}
+                            className="time-input"
+                            placeholder="HH:MM"
+                            maxLength={5}
+                            name="timeFrom" // Ensure name attribute is set
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="timeTo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="sr-only">До</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center">
+                          <span className="text-sm text-gray-500 mr-2">До</span>
+                          <Input 
+                            type="text" // Change to text for custom handling
+                            {...field} 
+                            ref={timeToRef}
+                            className="time-input"
+                            placeholder="HH:MM"
+                            maxLength={5}
+                            name="timeTo" // Ensure name attribute is set
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 </div>
               </div>
                             

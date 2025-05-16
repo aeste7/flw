@@ -712,6 +712,7 @@ export default function ActiveOrders() {
                     type="time"
                     value={formData.timeFrom}
                     onChange={handleInputChange}
+                    step="60"
                     required
                   />
                 </div>
@@ -724,6 +725,7 @@ export default function ActiveOrders() {
                     type="time"
                     value={formData.timeTo}
                     onChange={handleInputChange}
+                    step="60"
                     required
                   />
                 </div>

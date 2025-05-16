@@ -116,7 +116,7 @@ export default function WriteOff() {
       <Card className="bg-white rounded-lg shadow-sm">
         <CardHeader>
           <CardTitle>
-            Write-Off {isLoading ? "Цветов" : `${flower?.flower}`}
+            Списать {isLoading ? "Цветов" : `${flower?.flower}`}
           </CardTitle>
         </CardHeader>
         
