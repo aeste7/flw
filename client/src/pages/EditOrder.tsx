@@ -15,22 +15,26 @@ import { ArrowLeft } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function EditOrder() {
+  console.log("EditOrder component rendering");
+  
+  // Router and navigation
   const [match, params] = useRoute("/edit-order/:id");
   const [, navigate] = useLocation();
+
+ // Add this line to check the current route
+ console.log("🔴 Current route:", window.location.pathname, "Match:", match, "Params:", params);
+
+  const orderId = params?.id ? parseInt(params.id) : null;
+  
+  // Hooks
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const orderId = params?.id ? parseInt(params.id) : null;
-  const [selectedFlowers, setSelectedFlowers] = useState<Map<number, number>>(new Map());
-
   const timeFromRef = useRef<HTMLInputElement>(null);
   const timeToRef = useRef<HTMLInputElement>(null);
-
-  // Add this state to track projected inventory changes
-  const [projectedInventory, setProjectedInventory] = useState<Map<number, number>>(new Map());
-
-  console.log("Route match:", match, "Params:", params, "Order ID:", orderId);
   
-  // Form state
+  // State
+  const [selectedFlowers, setSelectedFlowers] = useState<Map<number, number>>(new Map());
+  const [projectedInventory, setProjectedInventory] = useState<Map<number, number>>(new Map());
   const [formData, setFormData] = useState({
     from: '',
     to: '',
@@ -42,321 +46,152 @@ export default function EditOrder() {
     pickup: false,
   });
   
-  // Query for the order
-  const { data: order, isLoading: isOrderLoading } = useQuery<Order>({
+  // Queries
+  const { 
+    data: order, 
+    isLoading: isOrderLoading 
+  } = useQuery<Order>({
     queryKey: ['/api/orders', orderId],
     queryFn: async () => {
       if (!orderId) return null;
-      console.log("Fetching order with ID:", orderId);
       const response = await apiRequest('GET', `/api/orders/${orderId}`);
-      
-      // Check if response is a Response object that needs to be parsed
       if (response instanceof Response) {
-        const data = await response.json();
-        console.log("Parsed order data:", data);
-        return data;
+        return await response.json();
       }
-      
-      console.log("Order data received:", response);
       return response;
     },
     enabled: !!orderId,
   });
   
-  // Similarly for order items
-  const { data: orderItems = [], isLoading: isItemsLoading } = useQuery<OrderItemType[]>({
+  const { 
+    data: orderItems = [], 
+    isLoading: isItemsLoading 
+  } = useQuery<OrderItemType[]>({
     queryKey: ['/api/orders', orderId, 'items'],
     queryFn: async () => {
-      if (!orderId) {
-        console.log("No order ID provided, returning empty array");
-        return [];
+      if (!orderId) return [];
+      const response = await apiRequest('GET', `/api/orders/${orderId}/items`);
+      if (response instanceof Response) {
+        return await response.json();
       }
-
-      console.log("Fetching order items for order ID:", orderId);
-      try {
-        const response = await apiRequest('GET', `/api/orders/${orderId}/items`);
-        console.log("Raw API response for items:", response);
-        
-        // Check if response is a Response object that needs to be parsed
-        if (response instanceof Response) {
-          const data = await response.json();
-          console.log("Parsed order items:", data);
-          return data;
-        }
-        
-        console.log("Order items received:", response);
-        return response;
-      } catch (error) {
-        console.error("Error fetching order items:", error);
-        return [];
-      }
+      return response;
     },
     enabled: !!orderId,
   });
   
-  // Query for available flowers
-  const { data: flowers = [], isLoading: isFlowersLoading } = useQuery<Warehouse[]>({
+  const { 
+    data: flowers = [], 
+    isLoading: isFlowersLoading 
+  } = useQuery<Warehouse[]>({
     queryKey: ['/api/flowers'],
     queryFn: async () => {
-      console.log("Fetching available flowers");
-      try {
-        const response = await apiRequest('GET', '/api/flowers');
-        console.log("Available flowers response:", response);
-        return response;
-      } catch (error) {
-        console.error("Error fetching flowers:", error);
-        return [];
+      const response = await apiRequest('GET', '/api/flowers');
+      if (response instanceof Response) {
+        return await response.json();
       }
-    }
+      return response;
+    },
   });
   
   // Set form data when order data is loaded
   useEffect(() => {
-    console.log("Order data changed:", order);
-    if (order) {
-      try {
-        // Try to create a valid date object
-        const dateObj = new Date(order.dateTime);
-        
-        // Check if the date is valid before calling toISOString()
-        if (!isNaN(dateObj.getTime())) {
-          // Format the date for the datetime-local input
-          // This format is YYYY-MM-DDThh:mm
-          const year = dateObj.getFullYear();
-          const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-          const day = String(dateObj.getDate()).padStart(2, '0');
-          //const hours = String(dateObj.getHours()).padStart(2, '0');
-          //const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-          
-          const localDateStr = `${year}-${month}-${day}`;
-          
-          setFormData({
-            from: order.from,
-            to: order.to,
-            address: order.address,
-            dateTime: localDateStr,
-            timeFrom: order.timeFrom || '',
-            timeTo: order.timeTo || '',
-            notes: order.notes || '',
-            pickup: order.pickup || false,
-          });
-        } else {
-          // Handle invalid date
-          console.error("Invalid date value:", order.dateTime);
-          
-          // Set form data with current date/time
-          const now = new Date();
-          const year = now.getFullYear();
-          const month = String(now.getMonth() + 1).padStart(2, '0');
-          const day = String(now.getDate()).padStart(2, '0');
-          
-          const localDateStr = `${year}-${month}-${day}`;
-          
-          setFormData({
-            from: order.from,
-            to: order.to,
-            address: order.address,
-            dateTime: localDateStr,
-            timeFrom: order.timeFrom || '',
-            timeTo: order.timeTo || '',
-            notes: order.notes || '',
-            pickup: order.pickup || false,
-          });
-          
-          toast({
-            title: "Внимание",
-            description: "Ошибка поля дата. Было установлено текущее время",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error("Error processing order date:", error);
-        
-        // Set form data with current date/time as fallback
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-
-        
+    if (!order) return;
+    
+    try {
+      // Parse date
+      const dateObj = new Date(order.dateTime);
+      
+      if (!isNaN(dateObj.getTime())) {
+        // Format date for input
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
         const localDateStr = `${year}-${month}-${day}`;
         
-       
         setFormData({
-          from: order.from,
-          to: order.to,
-          address: order.address,
+          from: order.from || '',
+          to: order.to || '',
+          address: order.address || '',
           dateTime: localDateStr,
           timeFrom: order.timeFrom || '',
           timeTo: order.timeTo || '',
           notes: order.notes || '',
-          pickup: order.pickup || false, // Set pickup value
+          pickup: order.pickup || false,
+        });
+      } else {
+        // Handle invalid date
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const localDateStr = `${year}-${month}-${day}`;
+        
+        setFormData({
+          from: order.from || '',
+          to: order.to || '',
+          address: order.address || '',
+          dateTime: localDateStr,
+          timeFrom: order.timeFrom || '',
+          timeTo: order.timeTo || '',
+          notes: order.notes || '',
+          pickup: order.pickup || false,
+        });
+        
+        toast({
+          title: "Внимание",
+          description: "Ошибка поля дата. Было установлено текущее время",
+          variant: "destructive",
         });
       }
+    } catch (error) {
+      console.error("Error processing order date:", error);
+      
+      // Fallback to current date
+      const now = new Date();
+      const localDateStr = now.toISOString().split('T')[0];
+      
+      setFormData({
+        from: order.from || '',
+        to: order.to || '',
+        address: order.address || '',
+        dateTime: localDateStr,
+        timeFrom: order.timeFrom || '',
+        timeTo: order.timeTo || '',
+        notes: order.notes || '',
+        pickup: order.pickup || false,
+      });
     }
   }, [order, toast]);
   
-  // Set selected flowers when order items are loaded
+  // Set selected flowers when order items and flowers are loaded
   useEffect(() => {
-    // ... existing effect code
-  }, [orderItems, flowers]);
-
-  // Add this effect to handle the time input formatting
-  useEffect(() => {
-    const setupTimeInput = (inputElement: HTMLInputElement | null) => {
-      if (!inputElement) return;
-      
-      inputElement.classList.add('time-input');
-      
-      const handleTimeInput = (e: Event) => {
-        const input = e.target as HTMLInputElement;
-        const cursorPosition = input.selectionStart || 0;
-        let value = input.value.replace(/[^0-9:]/g, "");
-        
-        // If there's already a colon in the input
-        if (value.includes(':')) {
-          const [hours, minutes] = value.split(':');
-          
-          // Validate hours (0-23)
-          let formattedHours = hours;
-          if (parseInt(hours) > 23) formattedHours = '23';
-          
-          // Validate minutes (0-59)
-          let formattedMinutes = minutes;
-          if (minutes.length > 0 && parseInt(minutes) > 59) formattedMinutes = '59';
-          
-          // Combine hours and minutes
-          input.value = `${formattedHours}:${formattedMinutes}`;
-          
-          // Restore cursor position
-          const newPosition = cursorPosition + (input.value.length - value.length);
-          input.setSelectionRange(newPosition, newPosition);
-          return;
-        }
-        
-        // If no colon yet, but we have at least 2 digits, add a colon
-        if (value.length >= 2) {
-          // Validate hours
-          let hours = value.substring(0, 2);
-          if (parseInt(hours) > 23) hours = '23';
-          
-          // Format with colon
-          if (value.length === 2) {
-            input.value = `${hours}:`;
-          } else {
-            // We have minutes too
-            let minutes = value.substring(2);
-            if (minutes.length > 0 && parseInt(minutes) > 59) minutes = '59';
-            input.value = `${hours}:${minutes}`;
-          }
-          
-          // Restore cursor position, accounting for the added colon
-          const newPosition = cursorPosition + (input.value.length - value.length);
-          input.setSelectionRange(newPosition, newPosition);
-        } else {
-          // Just 1 digit, no formatting needed yet
-          input.value = value;
-        }
-      };
-      
-      const handleBlur = (e: Event) => {
-        const input = e.target as HTMLInputElement;
-        let value = input.value.trim();
-        
-        // If empty, leave it empty
-        if (!value) return;
-        
-        // If only has hours (e.g., "14:")
-        if (value.endsWith(':')) {
-          value = value.slice(0, -1) + ":00";
-        }
-        
-        // If only has hours without colon (e.g., "14")
-        if (!value.includes(':') && value.length <= 2) {
-          value = value.padStart(2, '0') + ":00";
-        }
-        
-        // If has hours and minutes
-        if (value.includes(':')) {
-          const [hours, minutes] = value.split(':');
-          const formattedHours = hours.padStart(2, '0');
-          const formattedMinutes = (minutes || '00').padStart(2, '0');
-          value = `${formattedHours}:${formattedMinutes}`;
-        }
-        
-        input.value = value;
-        
-        // Update the form state to ensure the formatted value is saved
-        const name = input.name;
-        setFormData(prev => ({
-          ...prev,
-          [name]: value
-        }));
-      };
-      
-      inputElement.addEventListener("input", handleTimeInput);
-      inputElement.addEventListener("blur", handleBlur);
-      
-      // Return cleanup function
-      return () => {
-        inputElement.removeEventListener("input", handleTimeInput);
-        inputElement.removeEventListener("blur", handleBlur);
-      };
-    };
+    if (!Array.isArray(orderItems) || orderItems.length === 0 || 
+        !Array.isArray(flowers) || flowers.length === 0) {
+      return;
+    }
     
-    // Setup both time inputs
-    const cleanupTimeFrom = setupTimeInput(timeFromRef.current);
-    const cleanupTimeTo = setupTimeInput(timeToRef.current);
+    const newSelectedFlowers = new Map<number, number>();
     
-    return () => {
-      if (cleanupTimeFrom) cleanupTimeFrom();
-      if (cleanupTimeTo) cleanupTimeTo();
-    };
-  }, []);
-
-  // In the useEffect for setting selected flowers, add more detailed logging
-  useEffect(() => {
-    console.log("Order items or flowers changed:", { 
-      orderItems, 
-      orderItemsLength: orderItems?.length || 0,
-      flowers, 
-      flowersLength: flowers?.length || 0 
+    orderItems.forEach(item => {
+      const flower = flowers.find(f => f.flower === item.flower);
+      if (flower) {
+        newSelectedFlowers.set(flower.id, item.amount);
+      }
     });
     
-    if (orderItems && orderItems.length > 0 && flowers.length > 0) {
-      // Initialize the selectedFlowers map from the order items
-      const newSelectedFlowers = new Map<number, number>();
-      
-      orderItems.forEach((item: OrderItemType) => {
-        // Find the flower in the available flowers
-        console.log("Processing item:", item);
-        const flower = flowers.find(f => f.flower === item.flower);
-        console.log("Found flower:", flower);
-        
-        if (flower) {
-          newSelectedFlowers.set(flower.id, item.amount);
-        } else {
-          console.warn(`Flower not found for item: ${item.flower}`);
-        }
-      });
-      
-      console.log("Setting selected flowers:", newSelectedFlowers);
-      setSelectedFlowers(newSelectedFlowers);
-    } else {
-      console.log("Not setting selected flowers because:", {
-        orderItemsExist: !!orderItems,
-        orderItemsLength: orderItems?.length || 0,
-        flowersExist: !!flowers,
-        flowersLength: flowers?.length || 0
-      });
-    }
+    setSelectedFlowers(newSelectedFlowers);
   }, [orderItems, flowers]);
-
   
-// Add this useEffect to calculate projected inventory whenever selectedFlowers changes
+  // Calculate projected inventory
 // Add this useEffect to calculate projected inventory whenever selectedFlowers changes
 useEffect(() => {
+  console.log(`🔢 CALCULATING PROJECTED INVENTORY`);
+  console.log(`🔢 Selected flowers:`, Array.from(selectedFlowers.entries()));
+  console.log(`🔢 Order items:`, orderItems);
+  console.log(`🔢 Flowers:`, flowers);
+  
   if (!orderItems || orderItems.length === 0 || !flowers || !Array.isArray(flowers) || flowers.length === 0) {
+    console.log(`🔢 Missing data, skipping calculation`);
     return;
   }
 
@@ -364,6 +199,7 @@ useEffect(() => {
   const originalFlowerQuantities = new Map<string, number>();
   orderItems.forEach(item => {
     originalFlowerQuantities.set(item.flower, item.amount);
+    console.log(`🔢 Original quantity for ${item.flower}: ${item.amount}`);
   });
 
   // Create a map of current flower IDs to their names
@@ -375,9 +211,10 @@ useEffect(() => {
     flowers.forEach(flower => {
       flowerIdToName.set(flower.id, flower.flower);
       flowerNameToId.set(flower.flower, flower.id);
+      console.log(`🔢 Mapping flower ID ${flower.id} to name "${flower.flower}"`);
     });
   } else {
-    console.error("flowers is not an array:", flowers);
+    console.error("🔢 flowers is not an array:", flowers);
     return; // Exit early if flowers is not an array
   }
 
@@ -388,6 +225,7 @@ useEffect(() => {
   if (Array.isArray(flowers)) {
     flowers.forEach(flower => {
       newProjectedInventory.set(flower.id, flower.amount);
+      console.log(`🔢 Starting inventory for ${flower.flower} (ID: ${flower.id}): ${flower.amount}`);
     });
   }
 
@@ -396,74 +234,179 @@ useEffect(() => {
     const flowerId = flowerNameToId.get(flowerName);
     if (flowerId !== undefined) {
       const currentAmount = newProjectedInventory.get(flowerId) || 0;
-      newProjectedInventory.set(flowerId, currentAmount + amount);
+      const newAmount = currentAmount + amount;
+      newProjectedInventory.set(flowerId, newAmount);
+      console.log(`🔢 Adding back ${amount} of ${flowerName} (ID: ${flowerId}). ${currentAmount} → ${newAmount}`);
+    } else {
+      console.log(`🔢 Could not find ID for flower "${flowerName}"`);
     }
   });
 
   // Subtract new quantities from inventory
   selectedFlowers.forEach((amount, flowerId) => {
     const currentAmount = newProjectedInventory.get(flowerId) || 0;
-    newProjectedInventory.set(flowerId, currentAmount - amount);
+    const newAmount = currentAmount - amount;
+    newProjectedInventory.set(flowerId, newAmount);
+    const flowerName = flowerIdToName.get(flowerId) || `Unknown (ID: ${flowerId})`;
+    console.log(`🔢 Subtracting ${amount} of ${flowerName}. ${currentAmount} → ${newAmount}`);
   });
 
+  console.log(`🔢 Final projected inventory:`, Array.from(newProjectedInventory.entries()));
   setProjectedInventory(newProjectedInventory);
 }, [selectedFlowers, orderItems, flowers]);
 
-// Create a custom navigation function
-const navigateToWarehouse = async () => {
-  // Force refetch flowers data before navigation
-  await queryClient.refetchQueries({ queryKey: ['/api/flowers'] });
-  navigate("/warehouse");
-};
   
-  // Handle flower selection
-  const handleSelectFlower = (flowerId: number, amount: number) => {
-    const newSelectedFlowers = new Map(selectedFlowers);
-    
-    if (amount === 0) {
-      newSelectedFlowers.delete(flowerId);
-    } else {
-      newSelectedFlowers.set(flowerId, amount);
-    }
-    
-    setSelectedFlowers(newSelectedFlowers);
-  };
-  
-  // Handle input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-  
-  // Handle checkbox change
-  const handleCheckboxChange = (checked: boolean) => {
-    setFormData({
-      ...formData,
-      pickup: checked,
-      // If pickup is checked, we can set default values for disabled fields
-      // but we'll keep the original values in case pickup is unchecked again
-    });
-  };
-  
-  
-  // Update the updateOrderMutation to properly handle the async operations
-  const updateOrderMutation = useMutation({
-    mutationFn: async (data: any) => {
-      if (!orderId) throw new Error("Order ID is required");
+  // Handle time input formatting
+  useEffect(() => {
+    const setupTimeInput = (inputElement: HTMLInputElement | null) => {
+      if (!inputElement) return;
       
-      // First update the order
-      const orderResponse = await apiRequest('PUT', `/api/orders/${orderId}`, data);
+      inputElement.classList.add('time-input');
+      
+      const handleTimeInput = (e: Event) => {
+        const input = e.target as HTMLInputElement;
+        const cursorPosition = input.selectionStart || 0;
+        let value = input.value.replace(/[^0-9:]/g, "");
+        
+        // Format time input
+        if (value.includes(':')) {
+          const [hours, minutes] = value.split(':');
+          let formattedHours = hours;
+          if (parseInt(hours) > 23) formattedHours = '23';
+          
+          let formattedMinutes = minutes;
+          if (minutes.length > 0 && parseInt(minutes) > 59) formattedMinutes = '59';
+          
+          input.value = `${formattedHours}:${formattedMinutes}`;
+          
+          const newPosition = cursorPosition + (input.value.length - value.length);
+          input.setSelectionRange(newPosition, newPosition);
+          return;
+        }
+        
+        if (value.length >= 2) {
+          let hours = value.substring(0, 2);
+          if (parseInt(hours) > 23) hours = '23';
+          
+          if (value.length === 2) {
+            input.value = `${hours}:`;
+          } else {
+            let minutes = value.substring(2);
+            if (minutes.length > 0 && parseInt(minutes) > 59) minutes = '59';
+            input.value = `${hours}:${minutes}`;
+          }
+          
+          const newPosition = cursorPosition + (input.value.length - value.length);
+          input.setSelectionRange(newPosition, newPosition);
+        } else {
+          input.value = value;
+        }
+      };
+      
+      const handleBlur = (e: Event) => {
+        const input = e.target as HTMLInputElement;
+        let value = input.value.trim();
+        
+        if (!value) return;
+        
+        if (value.endsWith(':')) {
+          value = value.slice(0, -1) + ":00";
+        }
+        
+        if (!value.includes(':') && value.length <= 2) {
+          value = value.padStart(2, '0') + ":00";
+        }
+        
+        if (value.includes(':')) {
+          const [hours, minutes] = value.split(':');
+          const formattedHours = hours.padStart(2, '0');
+          const formattedMinutes = (minutes || '00').padStart(2, '0');
+          value = `${formattedHours}:${formattedMinutes}`;
+        }
+        
+        input.value = value;
+        
+        const name = input.name;
+        setFormData(prev => ({
+          ...prev,
+          [name]: value
+        }));
+      };
+      
+      inputElement.addEventListener("input", handleTimeInput);
+      inputElement.addEventListener("blur", handleBlur);
+      
+      return () => {
+        inputElement.removeEventListener("input", handleTimeInput);
+        inputElement.removeEventListener("blur", handleBlur);
+      };
+    };
+    
+    const cleanupTimeFrom = setupTimeInput(timeFromRef.current);
+    const cleanupTimeTo = setupTimeInput(timeToRef.current);
+    
+    return () => {
+      if (cleanupTimeFrom) cleanupTimeFrom();
+      if (cleanupTimeTo) cleanupTimeTo();
+    };
+  }, []);
+  
+
+  // Mount and unmount component log
+  useEffect(() => {
+    console.log("🔴 EDIT_ORDER: Component mounted");
+    
+    return () => {
+      console.log("🔴 EDIT_ORDER: Component unmounted");
+    };
+  }, []);
+  
+
+// Update order mutation
+const updateOrderMutation = useMutation({
+  mutationFn: async (data: {
+    order: Partial<Order>;
+    items: { flower: string; amount: number }[];
+    inventoryAdjustments: { flower: string; amount: number; action: 'take' | 'return' }[];
+  }) => {
+    if (!orderId) throw new Error("Order ID is required");
+    
+    console.log("=== UPDATE ORDER MUTATION STARTED ===");
+    console.log("Data received:", JSON.stringify(data, null, 2));
+    
+    try {
+      // First update the order with both order data and items
+      // Instead of separate calls, include items in the order update
+      console.log("Updating order details and items...");
+      const orderResponse = await apiRequest('PUT', `/api/orders/${orderId}`, {
+        order: data.order,
+        items: data.items
+      });
+      console.log("Order update response:", orderResponse);
       
       // Then handle inventory adjustments
       if (data.inventoryAdjustments && data.inventoryAdjustments.length > 0) {
+        console.log(`Processing ${data.inventoryAdjustments.length} inventory adjustments...`);
+        
+        // Get fresh flower data
+        console.log("Fetching current flower inventory...");
+        const flowersResponse = await apiRequest('GET', '/api/flowers');
+        const currentFlowers = flowersResponse instanceof Response 
+          ? await flowersResponse.json() 
+          : flowersResponse;
+        
+        console.log("Current flower inventory:", currentFlowers);
+        
         // Process each adjustment
         for (const adjustment of data.inventoryAdjustments) {
+          console.log(`Processing adjustment: ${adjustment.action} ${adjustment.amount} of ${adjustment.flower}`);
+          
           // Find the flower in the warehouse
-          const flowerToAdjust = Array.isArray(flowers) 
-            ? flowers.find(f => f.flower === adjustment.flower)
+          const flowerToAdjust = Array.isArray(currentFlowers) 
+            ? currentFlowers.find(f => f.flower === adjustment.flower) 
             : undefined;
+          
+          console.log("Found flower in warehouse:", flowerToAdjust);
           
           if (flowerToAdjust) {
             // Calculate new amount
@@ -472,96 +415,284 @@ const navigateToWarehouse = async () => {
             if (adjustment.action === 'return') {
               // Return flowers to inventory
               newAmount += adjustment.amount;
+              console.log(`Returning ${adjustment.amount} of ${adjustment.flower} to inventory. Current: ${flowerToAdjust.amount}, New: ${newAmount}`);
             } else if (adjustment.action === 'take') {
               // Take flowers from inventory
               newAmount = Math.max(0, newAmount - adjustment.amount);
+              console.log(`Taking ${adjustment.amount} of ${adjustment.flower} from inventory. Current: ${flowerToAdjust.amount}, New: ${newAmount}`);
             }
             
             // Update flower inventory
-            await apiRequest('PUT', `/api/flowers/${flowerToAdjust.id}`, {
+            console.log(`Updating flower ${flowerToAdjust.id} (${flowerToAdjust.flower}) inventory to ${newAmount}`);
+            const updateResponse = await apiRequest('PUT', `/api/flowers/${flowerToAdjust.id}`, {
               amount: newAmount
             });
+            console.log("Flower update response:", updateResponse);
+          } else if (adjustment.action === 'return') {
+            // If flower doesn't exist but we need to return it to inventory, create it
+            console.log(`Flower ${adjustment.flower} not found in warehouse. Creating new entry with amount ${adjustment.amount}`);
+            const createResponse = await apiRequest('POST', '/api/flowers', {
+              flower: adjustment.flower,
+              amount: adjustment.amount
+            });
+            console.log("Flower creation response:", createResponse);
+          } else {
+            console.error(`Flower ${adjustment.flower} not found in warehouse and action is ${adjustment.action}`);
           }
         }
+      } else {
+        console.log("No inventory adjustments to process");
       }
       
+      console.log("Order update completed successfully");
       return orderResponse;
-    },
-    onSuccess: async () => {
-      // Invalidate queries
-      await queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+    } catch (error) {
+      console.error("Error updating order:", error);
+      throw error;
+    }
+  },
+  onSuccess: async () => {
+    console.log("=== UPDATE ORDER MUTATION SUCCEEDED ===");
+    
+    // Invalidate and refetch queries
+    console.log("Invalidating queries...");
+    await queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+    await queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
+    
+    // Force refetch
+    console.log("Refetching queries...");
+    await queryClient.refetchQueries({ queryKey: ['/api/flowers'] });
+    
+    toast({
+      title: "Обновление заказа",
+      description: "Заказ был успешно обновлён",
+    });
+    
+    console.log("Navigating to active orders...");
+    setTimeout(() => {
+      navigate("/active-orders");
+    }, 500);
+  },
+  onError: (error) => {
+    console.error("=== UPDATE ORDER MUTATION FAILED ===", error);
+    
+    toast({
+      title: "Ошибка",
+      description: "Не удалось обновить заказ: " + (error instanceof Error ? error.message : String(error)),
+      variant: "destructive",
+    });
+  }
+});
+
+
+
+  
+  // Event handlers
+  // Handle flower selection
+  const handleSelectFlower = (flowerId: number, amount: number) => {
+    console.log(`🌸 FLOWER SELECTION CHANGED: ID=${flowerId}, New Amount=${amount}`);
+    
+    // Get the previous amount for comparison
+    const previousAmount = selectedFlowers.get(flowerId) || 0;
+    console.log(`🌸 Previous amount was: ${previousAmount}`);
+    
+    const newSelectedFlowers = new Map(selectedFlowers);
+    
+    if (amount === 0) {
+      console.log(`🌸 Removing flower ID=${flowerId} from selection`);
+      newSelectedFlowers.delete(flowerId);
+    } else {
+      console.log(`🌸 Setting flower ID=${flowerId} to amount=${amount}`);
+      newSelectedFlowers.set(flowerId, amount);
+    }
+    
+    // Log the flower name for better context
+    const flowerName = Array.isArray(flowers) 
+      ? flowers.find(f => f.id === flowerId)?.flower 
+      : undefined;
+    console.log(`🌸 Flower name: ${flowerName || 'Unknown'}`);
+    
+    setSelectedFlowers(newSelectedFlowers);
+    
+    // Log the updated selection
+    console.log(`🌸 Updated selection:`, Array.from(newSelectedFlowers.entries()));
+  };
+
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+  
+  const handleCheckboxChange = (checked: boolean) => {
+    setFormData({
+      ...formData,
+      pickup: checked,
+    });
+  };
+  
+  const handleCancel = () => {
+    navigate("/active-orders");
+  };
+  
+// Add this state to store the initial flower selection
+const [initialFlowerSelection, setInitialFlowerSelection] = useState<Map<number, number>>(new Map());
+
+// Modify the useEffect that sets selected flowers to also set the initial selection
+useEffect(() => {
+  console.log("Order items or flowers changed:", { 
+    orderItems, 
+    orderItemsLength: orderItems?.length || 0,
+    flowers, 
+    flowersLength: flowers?.length || 0 
+  });
+  
+  if (orderItems && orderItems.length > 0 && flowers.length > 0) {
+    // Initialize the selectedFlowers map from the order items
+    const newSelectedFlowers = new Map<number, number>();
+    
+    orderItems.forEach((item: OrderItemType) => {
+      // Find the flower in the available flowers
+      console.log("Processing item:", item);
+      const flower = flowers.find(f => f.flower === item.flower);
+      console.log("Found flower:", flower);
       
-      // Force refetch the flowers data to ensure it's up to date
-      await queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
-      await queryClient.refetchQueries({ queryKey: ['/api/flowers'] });
+      if (flower) {
+        newSelectedFlowers.set(flower.id, item.amount);
+      } else {
+        console.warn(`Flower not found for item: ${item.flower}`);
+      }
+    });
+    
+    console.log("Setting selected flowers:", newSelectedFlowers);
+    setSelectedFlowers(newSelectedFlowers);
+    
+    // Also set the initial flower selection for comparison later
+    console.log("Setting initial flower selection:", newSelectedFlowers);
+    setInitialFlowerSelection(new Map(newSelectedFlowers));
+  } else {
+    console.log("Not setting selected flowers because:", {
+      orderItemsExist: !!orderItems,
+      orderItemsLength: orderItems?.length || 0,
+      flowersExist: !!flowers,
+      flowersLength: flowers?.length || 0
+    });
+  }
+}, [orderItems, flowers]);
+
+// Now update the handleSubmit function to compare with initial selection
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  console.log("🔴 EDIT_ORDER: handleSubmit called");
+  
+  if (!orderId) return;
+  
+  // Check if any projected inventory is negative
+  let hasNegativeInventory = false;
+  projectedInventory.forEach((amount, flowerId) => {
+    if (amount < 0) {
+      hasNegativeInventory = true;
+      const flower = Array.isArray(flowers) 
+        ? flowers.find(f => f.id === flowerId) 
+        : undefined;
       
-      toast({
-        title: "Обновление заказа",
-        description: "Заказ был успешно обновлён",
-      });
-      
-      // Add a small delay to ensure data is refreshed before navigation
-      setTimeout(() => {
-        navigate("/active-orders");
-      }, 500);
-    },
-    onError: (error) => {
       toast({
         title: "Ошибка",
-        description: "Не удалось обновить заказ, пожалуйста, повторите попытку",
+        description: `Недостаточно цветов: ${flower?.flower}`,
         variant: "destructive",
       });
-      console.error("Error updating order:", error);
     }
   });
   
+  if (hasNegativeInventory) {
+    return;
+  }
   
-
+  // Parse date
+  const dateTime = new Date(formData.dateTime);
   
-  // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Prepare updated order items
+  const items = Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
+    const flower = Array.isArray(flowers) 
+      ? flowers.find(f => f.id === flowerId) 
+      : undefined;
     
-    if (!orderId) return;
+    const flowerName = flower?.flower || "";
+    console.log(`📋 Updated order item: ${flowerName} = ${amount}`);
     
-    // Check if any projected inventory is negative
-    let hasNegativeInventory = false;
-    projectedInventory.forEach((amount, flowerId) => {
-      if (amount < 0) {
-        hasNegativeInventory = true;
-        const flower = flowers.find(f => f.id === flowerId);
-        toast({
-          title: "Ошибка",
-          description: `Недостаточно цветов: ${flower?.flower}`,
-          variant: "destructive",
-        });
-      }
+    return {
+      flower: flowerName,
+      amount,
+    };
+  });
+  
+  console.log("Updated order items:", items);
+  
+  // Check if any flowers are selected
+  if (items.length === 0) {
+    toast({
+      title: "Ошибка",
+      description: "Пожалуйста, выберите хотя бы один цветок",
+      variant: "destructive",
     });
-    
-    if (hasNegativeInventory) {
-      return;
+    return;
+  }
+  
+  // IMPORTANT: Check if there are any actual changes to the flower selection
+  let hasChanges = false;
+  
+  // Compare current selection with initial selection
+  console.log("Comparing current selection with initial selection:");
+  console.log("Initial selection:", Array.from(initialFlowerSelection.entries()));
+  console.log("Current selection:", Array.from(selectedFlowers.entries()));
+  
+  // First check if the number of selected flowers has changed
+  if (initialFlowerSelection.size !== selectedFlowers.size) {
+    console.log(`Number of selected flowers changed: initial=${initialFlowerSelection.size}, current=${selectedFlowers.size}`);
+    hasChanges = true;
+  } else {
+    // Check each flower for quantity changes
+    for (const [flowerId, currentAmount] of selectedFlowers.entries()) {
+      const initialAmount = initialFlowerSelection.get(flowerId) || 0;
+      
+      if (currentAmount !== initialAmount) {
+        const flower = Array.isArray(flowers) ? flowers.find(f => f.id === flowerId) : undefined;
+        console.log(`Flower ${flower?.flower || flowerId} changed: initial=${initialAmount}, current=${currentAmount}`);
+        hasChanges = true;
+        break;
+      }
     }
     
-    const dateTime = new Date(formData.dateTime);
+    // Check if any initially selected flowers were removed
+    if (!hasChanges) {
+      for (const [flowerId] of initialFlowerSelection.entries()) {
+        if (!selectedFlowers.has(flowerId)) {
+          const flower = Array.isArray(flowers) ? flowers.find(f => f.id === flowerId) : undefined;
+          console.log(`Flower ${flower?.flower || flowerId} was removed`);
+          hasChanges = true;
+          break;
+        }
+      }
+    }
+  }
+  
+  // Only calculate inventory adjustments if there are changes
+  const inventoryAdjustments: { flower: string; amount: number; action: 'take' | 'return' }[] = [];
+  
+  if (hasChanges) {
+    console.log("Changes detected, calculating inventory adjustments");
     
     // Create a map of the original order items for comparison
     const originalOrderItems = new Map<string, number>();
-    orderItems.forEach(item => {
-      originalOrderItems.set(item.flower, item.amount);
-    });
-    
-    // Prepare order items and track changes for inventory updates
-    const items = Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
-      const flower = flowers.find(f => f.id === flowerId);
-      const flowerName = flower?.flower || "";
-      return {
-        flower: flowerName,
-        amount,
-      };
-    });
-    
-    // Calculate inventory adjustments
-    const inventoryAdjustments = [];
+    if (Array.isArray(orderItems)) {
+      orderItems.forEach(item => {
+        originalOrderItems.set(item.flower, item.amount);
+        console.log(`📋 Original order item: ${item.flower} = ${item.amount}`);
+      });
+    }
     
     // Check for reduced quantities (return to inventory)
     originalOrderItems.forEach((originalAmount, flowerName) => {
@@ -571,23 +702,20 @@ const navigateToWarehouse = async () => {
       if (updatedAmount < originalAmount) {
         // Flower quantity was reduced, return to inventory
         const returnAmount = originalAmount - updatedAmount;
+        console.log(`Returning ${returnAmount} of ${flowerName} to inventory`);
+        
         inventoryAdjustments.push({
           flower: flowerName,
           amount: returnAmount,
           action: 'return'
         });
-      }
-    });
-    
-    // Check for increased quantities (take from inventory)
-    items.forEach(item => {
-      const originalAmount = originalOrderItems.get(item.flower) || 0;
-      
-      if (item.amount > originalAmount) {
+      } else if (updatedAmount > originalAmount) {
         // Flower quantity was increased, take from inventory
-        const takeAmount = item.amount - originalAmount;
+        const takeAmount = updatedAmount - originalAmount;
+        console.log(`Taking ${takeAmount} of ${flowerName} from inventory`);
+        
         inventoryAdjustments.push({
-          flower: item.flower,
+          flower: flowerName,
           amount: takeAmount,
           action: 'take'
         });
@@ -598,6 +726,8 @@ const navigateToWarehouse = async () => {
     items.forEach(item => {
       if (!originalOrderItems.has(item.flower)) {
         // New flower added to order, take from inventory
+        console.log(`Taking ${item.amount} of ${item.flower} from inventory (new flower)`);
+        
         inventoryAdjustments.push({
           flower: item.flower,
           amount: item.amount,
@@ -610,6 +740,8 @@ const navigateToWarehouse = async () => {
     originalOrderItems.forEach((amount, flowerName) => {
       if (!items.some(item => item.flower === flowerName)) {
         // Flower removed from order, return to inventory
+        console.log(`Returning ${amount} of ${flowerName} to inventory (flower removed)`);
+        
         inventoryAdjustments.push({
           flower: flowerName,
           amount,
@@ -617,39 +749,35 @@ const navigateToWarehouse = async () => {
         });
       }
     });
-    
-    // Check if any flowers are selected
-    if (items.length === 0) {
-      toast({
-        title: "Ошибка",
-        description: "Пожалуйста, выберите хотя бы один цветок",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    updateOrderMutation.mutate({
-      order: {
-        from: formData.from,
-        to: formData.pickup ? "Самовывоз" : formData.to,
-        address: formData.pickup ? "Магазин" : formData.address,
-        dateTime: dateTime.toISOString(),
-        timeFrom: formData.timeFrom,
-        timeTo: formData.timeTo,
-        notes: formData.notes || null,
-        pickup: formData.pickup,
-      },
-      items,
-      inventoryAdjustments, // Pass inventory adjustments to the backend
-    });
-  };
-
-
-  // Handle cancel
-  const handleCancel = () => {
-    navigate("/active-orders");
-  };
+  } else {
+    console.log("No changes detected, skipping inventory adjustments");
+  }
   
+  console.log("Final inventory adjustments:", inventoryAdjustments);
+  
+  // Submit the order update
+  updateOrderMutation.mutate({
+    order: {
+      from: formData.from,
+      to: formData.pickup ? "Самовывоз" : formData.to,
+      address: formData.pickup ? "Магазин" : formData.address,
+      dateTime: dateTime.toISOString(),
+      timeFrom: formData.timeFrom,
+      timeTo: formData.timeTo,
+      notes: formData.notes || null,
+      pickup: formData.pickup,
+    },
+    items,
+    // Only include inventory adjustments if there are changes
+    inventoryAdjustments: hasChanges ? inventoryAdjustments : [],
+  });
+};
+
+   
+  
+  
+  
+  // Render loading state
   if (isOrderLoading || !order) {
     return (
       <div className="max-w-3xl mx-auto p-4">
@@ -668,6 +796,7 @@ const navigateToWarehouse = async () => {
     );
   }
   
+  // Render form
   return (
     <div className="max-w-3xl mx-auto p-4">
       <div className="mb-6">
@@ -739,7 +868,7 @@ const navigateToWarehouse = async () => {
             <Input
               id="timeFrom"
               name="timeFrom"
-              type="text" // Change to text for custom handling
+              type="text"
               value={formData.timeFrom}
               onChange={handleInputChange}
               ref={timeFromRef}
@@ -755,7 +884,7 @@ const navigateToWarehouse = async () => {
             <Input
               id="timeTo"
               name="timeTo"
-              type="text" // Change to text for custom handling
+              type="text"
               value={formData.timeTo}
               onChange={handleInputChange}
               ref={timeToRef}
@@ -767,7 +896,6 @@ const navigateToWarehouse = async () => {
           </div>
         </div>
         
-        {/* Add pickup checkbox */}
         <div className="flex items-center space-x-2">
           <Checkbox 
             id="pickup" 
@@ -800,6 +928,10 @@ const navigateToWarehouse = async () => {
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
+          ) : !Array.isArray(flowers) || flowers.length === 0 ? (
+            <div className="p-4 border rounded-md bg-gray-50 text-gray-500 text-center">
+              Нет доступных цветов
+            </div>
           ) : (
             <FlowerSelector
               flowers={flowers}
@@ -808,26 +940,26 @@ const navigateToWarehouse = async () => {
               projectedInventory={projectedInventory} 
             />
           )}
+          
           {selectedFlowers.size > 0 && (
             <Card className="mt-4">
               <CardContent className="p-4">
                 <h4 className="text-sm font-medium mb-2">Выбранные цветы</h4>
                 <ul className="space-y-2">
-                {Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
-                  // Add a check to ensure flowers is an array before using find
-                  const flower = Array.isArray(flowers) 
-                    ? flowers.find(f => f.id === flowerId) 
-                    : undefined;
-                  
-                  return (
-                    <li key={flowerId} className="text-sm">
-                      <div className="flex justify-between">
-                        <span>{flower?.flower || `Flower ID: ${flowerId}`}</span>
-                        <span>{amount} шт.</span>
-                      </div>
-                    </li>
-                  );
-                })}
+                  {Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
+                    const flower = Array.isArray(flowers) 
+                      ? flowers.find(f => f.id === flowerId) 
+                      : undefined;
+                    
+                    return (
+                      <li key={flowerId} className="text-sm">
+                        <div className="flex justify-between">
+                          <span>{flower?.flower || `Flower ID: ${flowerId}`}</span>
+                          <span>{amount} шт.</span>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               </CardContent>
             </Card>
@@ -841,7 +973,7 @@ const navigateToWarehouse = async () => {
             onClick={handleCancel}
             disabled={updateOrderMutation.isPending}
           >
-            Cancel
+            Отмена
           </Button>
           <Button 
             type="submit"
@@ -854,3 +986,4 @@ const navigateToWarehouse = async () => {
     </div>
   );
 }
+

@@ -52,9 +52,26 @@ export default function Warehouse() {
     navigate(`/warehouse${activeTab !== "available" ? `?tab=${activeTab}` : ""}`, { replace: true });
   }, [activeTab, navigate]);
   
-  // Query for flowers
-  const { data: flowers = [], isLoading } = useQuery<WarehouseType[]>({
+  // Query for available flowers - add better error handling and response parsing
+  const { data: flowers = [], isLoading, error } = useQuery<WarehouseType[]>({
     queryKey: ['/api/flowers'],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest('GET', '/api/flowers');
+        
+        if (response instanceof Response) {
+          const data = await response.json();
+          return Array.isArray(data) ? data : [];
+        }
+        
+        return Array.isArray(response) ? response : [];
+      } catch (error) {
+        console.error("Error fetching flowers:", error);
+        throw error; // Let React Query handle the error
+      }
+    },
+    retry: 2, // Retry failed requests up to 2 times
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
   
   // Query for writeoffs
@@ -154,7 +171,90 @@ export default function Warehouse() {
     }
   });
 
-
+  const updateOrderMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (!orderId) throw new Error("Order ID is required");
+      
+      try {
+        // First update the order
+        const orderResponse = await apiRequest('PUT', `/api/orders/${orderId}`, data);
+        
+        // Then handle inventory adjustments
+        if (data.inventoryAdjustments && data.inventoryAdjustments.length > 0) {
+          // Process each adjustment
+          for (const adjustment of data.inventoryAdjustments) {
+            // Find the flower in the warehouse
+            const flowersResponse = await apiRequest('GET', '/api/flowers');
+            let warehouseFlowers = [];
+            
+            if (flowersResponse instanceof Response) {
+              warehouseFlowers = await flowersResponse.json();
+            } else {
+              warehouseFlowers = Array.isArray(flowersResponse) ? flowersResponse : [];
+            }
+            
+            const flowerToAdjust = warehouseFlowers.find(f => f.flower === adjustment.flower);
+            
+            if (flowerToAdjust) {
+              // Calculate new amount
+              let newAmount = flowerToAdjust.amount;
+              
+              if (adjustment.action === 'return') {
+                // Return flowers to inventory
+                newAmount += adjustment.amount;
+              } else if (adjustment.action === 'take') {
+                // Take flowers from inventory
+                newAmount = Math.max(0, newAmount - adjustment.amount);
+              }
+              
+              console.log(`Adjusting ${adjustment.flower} inventory: ${flowerToAdjust.amount} -> ${newAmount}`);
+              
+              // Update flower inventory
+              await apiRequest('PUT', `/api/flowers/${flowerToAdjust.id}`, {
+                amount: newAmount
+              });
+            }
+          }
+        }
+        
+        return orderResponse;
+      } catch (error) {
+        console.error("Error in updateOrderMutation:", error);
+        throw error;
+      }
+    },
+    onSuccess: async () => {
+      try {
+        // Invalidate and refetch queries in sequence
+        await queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+        await queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
+        
+        // Force refetch the flowers data
+        await queryClient.refetchQueries({ queryKey: ['/api/flowers'] });
+        
+        toast({
+          title: "Обновление заказа",
+          description: "Заказ был успешно обновлён",
+        });
+        
+        // Add a delay to ensure data is refreshed before navigation
+        setTimeout(() => {
+          navigate("/active-orders");
+        }, 500);
+      } catch (error) {
+        console.error("Error in onSuccess callback:", error);
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить заказ, пожалуйста, повторите попытку",
+        variant: "destructive",
+      });
+      console.error("Error updating order:", error);
+    }
+  });
+  
   
   const clearWriteoffsMutation = useMutation({
     mutationFn: async () => {
@@ -224,32 +324,49 @@ export default function Warehouse() {
         {/* Available Tab */}
         <TabsContent value="available" className="space-y-4">
           <div className="bg-white rounded-lg shadow-sm divide-y divide-gray-200">
-            {isLoading ? (
-              // Loading skeleton
-              Array(4).fill(0).map((_, i) => (
-                <div key={i} className="p-4">
-                  <div className="flex justify-between">
-                    <div>
-                      <Skeleton className="h-5 w-24 mb-2" />
-                      <Skeleton className="h-3 w-40" />
-                    </div>
-                    <Skeleton className="h-8 w-8 rounded-full" />
+          {isLoading ? (
+            // Loading skeleton
+            Array(4).fill(0).map((_, i) => (
+              <div key={i} className="p-4">
+                <div className="flex justify-between">
+                  <div>
+                    <Skeleton className="h-5 w-24 mb-2" />
+                    <Skeleton className="h-3 w-40" />
                   </div>
+                  <Skeleton className="h-8 w-8 rounded-full" />
                 </div>
-              ))
-            ) : !flowers || !Array.isArray(flowers) ? (
-              <div className="p-6 text-center text-gray-500">
-                Ошибка данных. Пожалуйста, обновите страницу.
               </div>
-            ) : flowers.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
-                Нет доступных, добавьте новые цветы.
-              </div>
-            ) : (
-              flowers.map(flower => (
-                <FlowerItem key={flower.id} flower={flower} />
-              ))
-            )}
+            ))
+          ) : error ? (
+            <div className="p-6 text-center">
+              <p className="text-red-500 mb-2">Ошибка загрузки данных</p>
+              <Button 
+                onClick={() => queryClient.refetchQueries({ queryKey: ['/api/flowers'] })}
+                variant="outline"
+              >
+                Попробовать снова
+              </Button>
+            </div>
+          ) : !flowers || !Array.isArray(flowers) ? (
+            <div className="p-6 text-center text-gray-500">
+              <p>Ошибка данных. Пожалуйста, обновите страницу.</p>
+              <Button 
+                onClick={() => queryClient.refetchQueries({ queryKey: ['/api/flowers'] })}
+                variant="outline"
+                className="mt-2"
+              >
+                Обновить данные
+              </Button>
+            </div>
+          ) : flowers.length === 0 ? (
+            <div className="p-6 text-center text-gray-500">
+              Нет доступных, добавьте новые цветы.
+            </div>
+          ) : (
+            flowers.map(flower => (
+              <FlowerItem key={flower.id} flower={flower} />
+            ))
+          )}
           </div>
         </TabsContent>
 
