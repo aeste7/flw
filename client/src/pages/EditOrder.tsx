@@ -15,15 +15,9 @@ import { ArrowLeft } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function EditOrder() {
-  console.log("EditOrder component rendering");
-  
   // Router and navigation
-  const [match, params] = useRoute("/edit-order/:id");
+  const [, params] = useRoute("/edit-order/:id");
   const [, navigate] = useLocation();
-
- // Add this line to check the current route
- console.log("🔴 Current route:", window.location.pathname, "Match:", match, "Params:", params);
-
   const orderId = params?.id ? parseInt(params.id) : null;
   
   // Hooks
@@ -34,6 +28,7 @@ export default function EditOrder() {
   
   // State
   const [selectedFlowers, setSelectedFlowers] = useState<Map<number, number>>(new Map());
+  const [initialFlowerSelection, setInitialFlowerSelection] = useState<Map<number, number>>(new Map());
   const [projectedInventory, setProjectedInventory] = useState<Map<number, number>>(new Map());
   const [formData, setFormData] = useState({
     from: '',
@@ -55,26 +50,19 @@ export default function EditOrder() {
     queryFn: async () => {
       if (!orderId) return null;
       const response = await apiRequest('GET', `/api/orders/${orderId}`);
-      if (response instanceof Response) {
-        return await response.json();
-      }
-      return response;
+      return response instanceof Response ? await response.json() : response;
     },
     enabled: !!orderId,
   });
   
   const { 
-    data: orderItems = [], 
-    isLoading: isItemsLoading 
+    data: orderItems = []
   } = useQuery<OrderItemType[]>({
     queryKey: ['/api/orders', orderId, 'items'],
     queryFn: async () => {
       if (!orderId) return [];
       const response = await apiRequest('GET', `/api/orders/${orderId}/items`);
-      if (response instanceof Response) {
-        return await response.json();
-      }
-      return response;
+      return response instanceof Response ? await response.json() : response;
     },
     enabled: !!orderId,
   });
@@ -86,10 +74,7 @@ export default function EditOrder() {
     queryKey: ['/api/flowers'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/flowers');
-      if (response instanceof Response) {
-        return await response.json();
-      }
-      return response;
+      return response instanceof Response ? await response.json() : response;
     },
   });
   
@@ -98,11 +83,9 @@ export default function EditOrder() {
     if (!order) return;
     
     try {
-      // Parse date
       const dateObj = new Date(order.dateTime);
       
       if (!isNaN(dateObj.getTime())) {
-        // Format date for input
         const year = dateObj.getFullYear();
         const month = String(dateObj.getMonth() + 1).padStart(2, '0');
         const day = String(dateObj.getDate()).padStart(2, '0');
@@ -119,7 +102,6 @@ export default function EditOrder() {
           pickup: order.pickup || false,
         });
       } else {
-        // Handle invalid date
         const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -144,9 +126,6 @@ export default function EditOrder() {
         });
       }
     } catch (error) {
-      console.error("Error processing order date:", error);
-      
-      // Fallback to current date
       const now = new Date();
       const localDateStr = now.toISOString().split('T')[0];
       
@@ -180,81 +159,51 @@ export default function EditOrder() {
     });
     
     setSelectedFlowers(newSelectedFlowers);
+    setInitialFlowerSelection(new Map(newSelectedFlowers));
   }, [orderItems, flowers]);
   
   // Calculate projected inventory
-// Add this useEffect to calculate projected inventory whenever selectedFlowers changes
-useEffect(() => {
-  console.log(`🔢 CALCULATING PROJECTED INVENTORY`);
-  console.log(`🔢 Selected flowers:`, Array.from(selectedFlowers.entries()));
-  console.log(`🔢 Order items:`, orderItems);
-  console.log(`🔢 Flowers:`, flowers);
-  
-  if (!orderItems || orderItems.length === 0 || !flowers || !Array.isArray(flowers) || flowers.length === 0) {
-    console.log(`🔢 Missing data, skipping calculation`);
-    return;
-  }
+  useEffect(() => {
+    if (!orderItems || !flowers || !Array.isArray(flowers)) return;
+    
+    // Create maps for lookup
+    const originalFlowerQuantities = new Map<string, number>();
+    orderItems.forEach(item => {
+      originalFlowerQuantities.set(item.flower, item.amount);
+    });
 
-  // Create a map of original flower quantities from order items
-  const originalFlowerQuantities = new Map<string, number>();
-  orderItems.forEach(item => {
-    originalFlowerQuantities.set(item.flower, item.amount);
-    console.log(`🔢 Original quantity for ${item.flower}: ${item.amount}`);
-  });
-
-  // Create a map of current flower IDs to their names
-  const flowerIdToName = new Map<number, string>();
-  const flowerNameToId = new Map<string, number>();
-  
-  // Make sure flowers is an array before using forEach
-  if (Array.isArray(flowers)) {
+    const flowerIdToName = new Map<number, string>();
+    const flowerNameToId = new Map<string, number>();
     flowers.forEach(flower => {
       flowerIdToName.set(flower.id, flower.flower);
       flowerNameToId.set(flower.flower, flower.id);
-      console.log(`🔢 Mapping flower ID ${flower.id} to name "${flower.flower}"`);
     });
-  } else {
-    console.error("🔢 flowers is not an array:", flowers);
-    return; // Exit early if flowers is not an array
-  }
 
-  // Calculate projected inventory
-  const newProjectedInventory = new Map<number, number>();
-  
-  // Start with current inventory
-  if (Array.isArray(flowers)) {
+    // Calculate projected inventory
+    const newProjectedInventory = new Map<number, number>();
+    
+    // Start with current inventory
     flowers.forEach(flower => {
       newProjectedInventory.set(flower.id, flower.amount);
-      console.log(`🔢 Starting inventory for ${flower.flower} (ID: ${flower.id}): ${flower.amount}`);
     });
-  }
 
-  // Return original quantities to inventory (add back)
-  originalFlowerQuantities.forEach((amount, flowerName) => {
-    const flowerId = flowerNameToId.get(flowerName);
-    if (flowerId !== undefined) {
+    // Return original quantities to inventory (add back)
+    originalFlowerQuantities.forEach((amount, flowerName) => {
+      const flowerId = flowerNameToId.get(flowerName);
+      if (flowerId !== undefined) {
+        const currentAmount = newProjectedInventory.get(flowerId) || 0;
+        newProjectedInventory.set(flowerId, currentAmount + amount);
+      }
+    });
+
+    // Subtract new quantities from inventory
+    selectedFlowers.forEach((amount, flowerId) => {
       const currentAmount = newProjectedInventory.get(flowerId) || 0;
-      const newAmount = currentAmount + amount;
-      newProjectedInventory.set(flowerId, newAmount);
-      console.log(`🔢 Adding back ${amount} of ${flowerName} (ID: ${flowerId}). ${currentAmount} → ${newAmount}`);
-    } else {
-      console.log(`🔢 Could not find ID for flower "${flowerName}"`);
-    }
-  });
+      newProjectedInventory.set(flowerId, currentAmount - amount);
+    });
 
-  // Subtract new quantities from inventory
-  selectedFlowers.forEach((amount, flowerId) => {
-    const currentAmount = newProjectedInventory.get(flowerId) || 0;
-    const newAmount = currentAmount - amount;
-    newProjectedInventory.set(flowerId, newAmount);
-    const flowerName = flowerIdToName.get(flowerId) || `Unknown (ID: ${flowerId})`;
-    console.log(`🔢 Subtracting ${amount} of ${flowerName}. ${currentAmount} → ${newAmount}`);
-  });
-
-  console.log(`🔢 Final projected inventory:`, Array.from(newProjectedInventory.entries()));
-  setProjectedInventory(newProjectedInventory);
-}, [selectedFlowers, orderItems, flowers]);
-
+    setProjectedInventory(newProjectedInventory);
+  }, [selectedFlowers, orderItems, flowers]);
   
   // Handle time input formatting
   useEffect(() => {
@@ -268,7 +217,6 @@ useEffect(() => {
         const cursorPosition = input.selectionStart || 0;
         let value = input.value.replace(/[^0-9:]/g, "");
         
-        // Format time input
         if (value.includes(':')) {
           const [hours, minutes] = value.split(':');
           let formattedHours = hours;
@@ -351,173 +299,53 @@ useEffect(() => {
     };
   }, []);
   
-
-  // Mount and unmount component log
-  useEffect(() => {
-    console.log("🔴 EDIT_ORDER: Component mounted");
-    
-    return () => {
-      console.log("🔴 EDIT_ORDER: Component unmounted");
-    };
-  }, []);
-  
-
-// Update order mutation
-const updateOrderMutation = useMutation({
-  mutationFn: async (data: {
-    order: Partial<Order>;
-    items: { flower: string; amount: number }[];
-    inventoryAdjustments: { flower: string; amount: number; action: 'take' | 'return' }[];
-  }) => {
-    if (!orderId) throw new Error("Order ID is required");
-    
-    console.log("=== UPDATE ORDER MUTATION STARTED ===");
-    console.log("Data received:", JSON.stringify(data, null, 2));
-    
-    try {
-      // First update the order with both order data and items
-      // Instead of separate calls, include items in the order update
-      console.log("Updating order details and items...");
-      const orderResponse = await apiRequest('PUT', `/api/orders/${orderId}`, {
-        order: data.order,
-        items: data.items
-      });
-      console.log("Order update response:", orderResponse);
+  // Update order mutation
+  const updateOrderMutation = useMutation({
+    mutationFn: async (data: {
+      order: Partial<Order>;
+      items: { flower: string; amount: number }[];
+    }) => {
+      if (!orderId) throw new Error("Order ID is required");
       
-      // Then handle inventory adjustments
-      if (data.inventoryAdjustments && data.inventoryAdjustments.length > 0) {
-        console.log(`Processing ${data.inventoryAdjustments.length} inventory adjustments...`);
-        
-        // Get fresh flower data
-        console.log("Fetching current flower inventory...");
-        const flowersResponse = await apiRequest('GET', '/api/flowers');
-        const currentFlowers = flowersResponse instanceof Response 
-          ? await flowersResponse.json() 
-          : flowersResponse;
-        
-        console.log("Current flower inventory:", currentFlowers);
-        
-        // Process each adjustment
-        for (const adjustment of data.inventoryAdjustments) {
-          console.log(`Processing adjustment: ${adjustment.action} ${adjustment.amount} of ${adjustment.flower}`);
-          
-          // Find the flower in the warehouse
-          const flowerToAdjust = Array.isArray(currentFlowers) 
-            ? currentFlowers.find(f => f.flower === adjustment.flower) 
-            : undefined;
-          
-          console.log("Found flower in warehouse:", flowerToAdjust);
-          
-          if (flowerToAdjust) {
-            // Calculate new amount
-            let newAmount = flowerToAdjust.amount;
-            
-            if (adjustment.action === 'return') {
-              // Return flowers to inventory
-              newAmount += adjustment.amount;
-              console.log(`Returning ${adjustment.amount} of ${adjustment.flower} to inventory. Current: ${flowerToAdjust.amount}, New: ${newAmount}`);
-            } else if (adjustment.action === 'take') {
-              // Take flowers from inventory
-              newAmount = Math.max(0, newAmount - adjustment.amount);
-              console.log(`Taking ${adjustment.amount} of ${adjustment.flower} from inventory. Current: ${flowerToAdjust.amount}, New: ${newAmount}`);
-            }
-            
-            // Update flower inventory
-            console.log(`Updating flower ${flowerToAdjust.id} (${flowerToAdjust.flower}) inventory to ${newAmount}`);
-            const updateResponse = await apiRequest('PUT', `/api/flowers/${flowerToAdjust.id}`, {
-              amount: newAmount
-            });
-            console.log("Flower update response:", updateResponse);
-          } else if (adjustment.action === 'return') {
-            // If flower doesn't exist but we need to return it to inventory, create it
-            console.log(`Flower ${adjustment.flower} not found in warehouse. Creating new entry with amount ${adjustment.amount}`);
-            const createResponse = await apiRequest('POST', '/api/flowers', {
-              flower: adjustment.flower,
-              amount: adjustment.amount
-            });
-            console.log("Flower creation response:", createResponse);
-          } else {
-            console.error(`Flower ${adjustment.flower} not found in warehouse and action is ${adjustment.action}`);
-          }
-        }
-      } else {
-        console.log("No inventory adjustments to process");
-      }
-      
-      console.log("Order update completed successfully");
+      // Send the update to the server - the server will handle inventory adjustments
+      const orderResponse = await apiRequest('PUT', `/api/orders/${orderId}`, data);
       return orderResponse;
-    } catch (error) {
-      console.error("Error updating order:", error);
-      throw error;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/flowers'] });
+      
+      toast({
+        title: "Обновление заказа",
+        description: "Заказ был успешно обновлён",
+      });
+      
+      setTimeout(() => {
+        navigate("/active-orders");
+      }, 500);
+    },
+    onError: (error) => {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить заказ: " + (error instanceof Error ? error.message : String(error)),
+        variant: "destructive",
+      });
     }
-  },
-  onSuccess: async () => {
-    console.log("=== UPDATE ORDER MUTATION SUCCEEDED ===");
-    
-    // Invalidate and refetch queries
-    console.log("Invalidating queries...");
-    await queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-    await queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
-    
-    // Force refetch
-    console.log("Refetching queries...");
-    await queryClient.refetchQueries({ queryKey: ['/api/flowers'] });
-    
-    toast({
-      title: "Обновление заказа",
-      description: "Заказ был успешно обновлён",
-    });
-    
-    console.log("Navigating to active orders...");
-    setTimeout(() => {
-      navigate("/active-orders");
-    }, 500);
-  },
-  onError: (error) => {
-    console.error("=== UPDATE ORDER MUTATION FAILED ===", error);
-    
-    toast({
-      title: "Ошибка",
-      description: "Не удалось обновить заказ: " + (error instanceof Error ? error.message : String(error)),
-      variant: "destructive",
-    });
-  }
-});
-
-
-
+  });
   
   // Event handlers
-  // Handle flower selection
   const handleSelectFlower = (flowerId: number, amount: number) => {
-    console.log(`🌸 FLOWER SELECTION CHANGED: ID=${flowerId}, New Amount=${amount}`);
-    
-    // Get the previous amount for comparison
-    const previousAmount = selectedFlowers.get(flowerId) || 0;
-    console.log(`🌸 Previous amount was: ${previousAmount}`);
-    
     const newSelectedFlowers = new Map(selectedFlowers);
     
     if (amount === 0) {
-      console.log(`🌸 Removing flower ID=${flowerId} from selection`);
       newSelectedFlowers.delete(flowerId);
     } else {
-      console.log(`🌸 Setting flower ID=${flowerId} to amount=${amount}`);
       newSelectedFlowers.set(flowerId, amount);
     }
     
-    // Log the flower name for better context
-    const flowerName = Array.isArray(flowers) 
-      ? flowers.find(f => f.id === flowerId)?.flower 
-      : undefined;
-    console.log(`🌸 Flower name: ${flowerName || 'Unknown'}`);
-    
     setSelectedFlowers(newSelectedFlowers);
-    
-    // Log the updated selection
-    console.log(`🌸 Updated selection:`, Array.from(newSelectedFlowers.entries()));
   };
-
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -537,247 +365,72 @@ const updateOrderMutation = useMutation({
     navigate("/active-orders");
   };
   
-// Add this state to store the initial flower selection
-const [initialFlowerSelection, setInitialFlowerSelection] = useState<Map<number, number>>(new Map());
-
-// Modify the useEffect that sets selected flowers to also set the initial selection
-useEffect(() => {
-  console.log("Order items or flowers changed:", { 
-    orderItems, 
-    orderItemsLength: orderItems?.length || 0,
-    flowers, 
-    flowersLength: flowers?.length || 0 
-  });
-  
-  if (orderItems && orderItems.length > 0 && flowers.length > 0) {
-    // Initialize the selectedFlowers map from the order items
-    const newSelectedFlowers = new Map<number, number>();
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     
-    orderItems.forEach((item: OrderItemType) => {
-      // Find the flower in the available flowers
-      console.log("Processing item:", item);
-      const flower = flowers.find(f => f.flower === item.flower);
-      console.log("Found flower:", flower);
-      
-      if (flower) {
-        newSelectedFlowers.set(flower.id, item.amount);
-      } else {
-        console.warn(`Flower not found for item: ${item.flower}`);
+    if (!orderId) return;
+    
+    // Check if any projected inventory is negative
+    let hasNegativeInventory = false;
+    projectedInventory.forEach((amount, flowerId) => {
+      if (amount < 0) {
+        hasNegativeInventory = true;
+        const flower = Array.isArray(flowers) 
+          ? flowers.find(f => f.id === flowerId) 
+          : undefined;
+        
+        toast({
+          title: "Ошибка",
+          description: `Недостаточно цветов: ${flower?.flower}`,
+          variant: "destructive",
+        });
       }
     });
     
-    console.log("Setting selected flowers:", newSelectedFlowers);
-    setSelectedFlowers(newSelectedFlowers);
+    if (hasNegativeInventory) return;
     
-    // Also set the initial flower selection for comparison later
-    console.log("Setting initial flower selection:", newSelectedFlowers);
-    setInitialFlowerSelection(new Map(newSelectedFlowers));
-  } else {
-    console.log("Not setting selected flowers because:", {
-      orderItemsExist: !!orderItems,
-      orderItemsLength: orderItems?.length || 0,
-      flowersExist: !!flowers,
-      flowersLength: flowers?.length || 0
-    });
-  }
-}, [orderItems, flowers]);
-
-// Now update the handleSubmit function to compare with initial selection
-const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  console.log("🔴 EDIT_ORDER: handleSubmit called");
-  
-  if (!orderId) return;
-  
-  // Check if any projected inventory is negative
-  let hasNegativeInventory = false;
-  projectedInventory.forEach((amount, flowerId) => {
-    if (amount < 0) {
-      hasNegativeInventory = true;
+    // Parse date
+    const dateTime = new Date(formData.dateTime);
+    
+    // Prepare updated order items
+    const items = Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
       const flower = Array.isArray(flowers) 
         ? flowers.find(f => f.id === flowerId) 
         : undefined;
       
+      return {
+        flower: flower?.flower || "",
+        amount,
+      };
+    });
+    
+    // Check if any flowers are selected
+    if (items.length === 0) {
       toast({
         title: "Ошибка",
-        description: `Недостаточно цветов: ${flower?.flower}`,
+        description: "Пожалуйста, выберите хотя бы один цветок",
         variant: "destructive",
       });
-    }
-  });
-  
-  if (hasNegativeInventory) {
-    return;
-  }
-  
-  // Parse date
-  const dateTime = new Date(formData.dateTime);
-  
-  // Prepare updated order items
-  const items = Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
-    const flower = Array.isArray(flowers) 
-      ? flowers.find(f => f.id === flowerId) 
-      : undefined;
-    
-    const flowerName = flower?.flower || "";
-    console.log(`📋 Updated order item: ${flowerName} = ${amount}`);
-    
-    return {
-      flower: flowerName,
-      amount,
-    };
-  });
-  
-  console.log("Updated order items:", items);
-  
-  // Check if any flowers are selected
-  if (items.length === 0) {
-    toast({
-      title: "Ошибка",
-      description: "Пожалуйста, выберите хотя бы один цветок",
-      variant: "destructive",
-    });
-    return;
-  }
-  
-  // IMPORTANT: Check if there are any actual changes to the flower selection
-  let hasChanges = false;
-  
-  // Compare current selection with initial selection
-  console.log("Comparing current selection with initial selection:");
-  console.log("Initial selection:", Array.from(initialFlowerSelection.entries()));
-  console.log("Current selection:", Array.from(selectedFlowers.entries()));
-  
-  // First check if the number of selected flowers has changed
-  if (initialFlowerSelection.size !== selectedFlowers.size) {
-    console.log(`Number of selected flowers changed: initial=${initialFlowerSelection.size}, current=${selectedFlowers.size}`);
-    hasChanges = true;
-  } else {
-    // Check each flower for quantity changes
-    for (const [flowerId, currentAmount] of selectedFlowers.entries()) {
-      const initialAmount = initialFlowerSelection.get(flowerId) || 0;
-      
-      if (currentAmount !== initialAmount) {
-        const flower = Array.isArray(flowers) ? flowers.find(f => f.id === flowerId) : undefined;
-        console.log(`Flower ${flower?.flower || flowerId} changed: initial=${initialAmount}, current=${currentAmount}`);
-        hasChanges = true;
-        break;
-      }
+      return;
     }
     
-    // Check if any initially selected flowers were removed
-    if (!hasChanges) {
-      for (const [flowerId] of initialFlowerSelection.entries()) {
-        if (!selectedFlowers.has(flowerId)) {
-          const flower = Array.isArray(flowers) ? flowers.find(f => f.id === flowerId) : undefined;
-          console.log(`Flower ${flower?.flower || flowerId} was removed`);
-          hasChanges = true;
-          break;
-        }
-      }
-    }
-  }
-  
-  // Only calculate inventory adjustments if there are changes
-  const inventoryAdjustments: { flower: string; amount: number; action: 'take' | 'return' }[] = [];
-  
-  if (hasChanges) {
-    console.log("Changes detected, calculating inventory adjustments");
-    
-    // Create a map of the original order items for comparison
-    const originalOrderItems = new Map<string, number>();
-    if (Array.isArray(orderItems)) {
-      orderItems.forEach(item => {
-        originalOrderItems.set(item.flower, item.amount);
-        console.log(`📋 Original order item: ${item.flower} = ${item.amount}`);
-      });
-    }
-    
-    // Check for reduced quantities (return to inventory)
-    originalOrderItems.forEach((originalAmount, flowerName) => {
-      const updatedItem = items.find(item => item.flower === flowerName);
-      const updatedAmount = updatedItem ? updatedItem.amount : 0;
-      
-      if (updatedAmount < originalAmount) {
-        // Flower quantity was reduced, return to inventory
-        const returnAmount = originalAmount - updatedAmount;
-        console.log(`Returning ${returnAmount} of ${flowerName} to inventory`);
-        
-        inventoryAdjustments.push({
-          flower: flowerName,
-          amount: returnAmount,
-          action: 'return'
-        });
-      } else if (updatedAmount > originalAmount) {
-        // Flower quantity was increased, take from inventory
-        const takeAmount = updatedAmount - originalAmount;
-        console.log(`Taking ${takeAmount} of ${flowerName} from inventory`);
-        
-        inventoryAdjustments.push({
-          flower: flowerName,
-          amount: takeAmount,
-          action: 'take'
-        });
-      }
+    // Submit the order update - the server will handle the differential update
+    updateOrderMutation.mutate({
+      order: {
+        from: formData.from,
+        to: formData.pickup ? "Самовывоз" : formData.to,
+        address: formData.pickup ? "Магазин" : formData.address,
+        dateTime: dateTime.toISOString(),
+        timeFrom: formData.timeFrom,
+        timeTo: formData.timeTo,
+        notes: formData.notes || null,
+        pickup: formData.pickup,
+      },
+      items,
     });
-    
-    // Check for new flowers (take from inventory)
-    items.forEach(item => {
-      if (!originalOrderItems.has(item.flower)) {
-        // New flower added to order, take from inventory
-        console.log(`Taking ${item.amount} of ${item.flower} from inventory (new flower)`);
-        
-        inventoryAdjustments.push({
-          flower: item.flower,
-          amount: item.amount,
-          action: 'take'
-        });
-      }
-    });
-    
-    // Check for removed flowers (return to inventory)
-    originalOrderItems.forEach((amount, flowerName) => {
-      if (!items.some(item => item.flower === flowerName)) {
-        // Flower removed from order, return to inventory
-        console.log(`Returning ${amount} of ${flowerName} to inventory (flower removed)`);
-        
-        inventoryAdjustments.push({
-          flower: flowerName,
-          amount,
-          action: 'return'
-        });
-      }
-    });
-  } else {
-    console.log("No changes detected, skipping inventory adjustments");
-  }
+  };
   
-  console.log("Final inventory adjustments:", inventoryAdjustments);
-  
-  // Submit the order update
-  updateOrderMutation.mutate({
-    order: {
-      from: formData.from,
-      to: formData.pickup ? "Самовывоз" : formData.to,
-      address: formData.pickup ? "Магазин" : formData.address,
-      dateTime: dateTime.toISOString(),
-      timeFrom: formData.timeFrom,
-      timeTo: formData.timeTo,
-      notes: formData.notes || null,
-      pickup: formData.pickup,
-    },
-    items,
-    // Only include inventory adjustments if there are changes
-    inventoryAdjustments: hasChanges ? inventoryAdjustments : [],
-  });
-};
-
-   
-  
-  
-  
-  // Render loading state
+  // Loading state
   if (isOrderLoading || !order) {
     return (
       <div className="max-w-3xl mx-auto p-4">
@@ -796,7 +449,7 @@ const handleSubmit = (e: React.FormEvent) => {
     );
   }
   
-  // Render form
+  // Render
   return (
     <div className="max-w-3xl mx-auto p-4">
       <div className="mb-6">
@@ -928,10 +581,6 @@ const handleSubmit = (e: React.FormEvent) => {
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
-          ) : !Array.isArray(flowers) || flowers.length === 0 ? (
-            <div className="p-4 border rounded-md bg-gray-50 text-gray-500 text-center">
-              Нет доступных цветов
-            </div>
           ) : (
             <FlowerSelector
               flowers={flowers}
@@ -940,26 +589,25 @@ const handleSubmit = (e: React.FormEvent) => {
               projectedInventory={projectedInventory} 
             />
           )}
-          
           {selectedFlowers.size > 0 && (
             <Card className="mt-4">
               <CardContent className="p-4">
                 <h4 className="text-sm font-medium mb-2">Выбранные цветы</h4>
                 <ul className="space-y-2">
-                  {Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
-                    const flower = Array.isArray(flowers) 
-                      ? flowers.find(f => f.id === flowerId) 
-                      : undefined;
-                    
-                    return (
-                      <li key={flowerId} className="text-sm">
-                        <div className="flex justify-between">
-                          <span>{flower?.flower || `Flower ID: ${flowerId}`}</span>
-                          <span>{amount} шт.</span>
-                        </div>
-                      </li>
-                    );
-                  })}
+                {Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
+                  const flower = Array.isArray(flowers) 
+                    ? flowers.find(f => f.id === flowerId) 
+                    : undefined;
+                  
+                  return (
+                    <li key={flowerId} className="text-sm">
+                      <div className="flex justify-between">
+                        <span>{flower?.flower || `Flower ID: ${flowerId}`}</span>
+                        <span>{amount} шт.</span>
+                      </div>
+                    </li>
+                  );
+                })}
                 </ul>
               </CardContent>
             </Card>
@@ -973,7 +621,7 @@ const handleSubmit = (e: React.FormEvent) => {
             onClick={handleCancel}
             disabled={updateOrderMutation.isPending}
           >
-            Отмена
+            Cancel
           </Button>
           <Button 
             type="submit"
@@ -986,4 +634,3 @@ const handleSubmit = (e: React.FormEvent) => {
     </div>
   );
 }
-
