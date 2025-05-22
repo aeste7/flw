@@ -175,75 +175,27 @@ export default function Warehouse() {
     mutationFn: async (data: any) => {
       if (!orderId) throw new Error("Order ID is required");
       
-      try {
-        // First update the order
-        const orderResponse = await apiRequest('PUT', `/api/orders/${orderId}`, data);
-        
-        // Then handle inventory adjustments
-        if (data.inventoryAdjustments && data.inventoryAdjustments.length > 0) {
-          // Process each adjustment
-          for (const adjustment of data.inventoryAdjustments) {
-            // Find the flower in the warehouse
-            const flowersResponse = await apiRequest('GET', '/api/flowers');
-            let warehouseFlowers = [];
-            
-            if (flowersResponse instanceof Response) {
-              warehouseFlowers = await flowersResponse.json();
-            } else {
-              warehouseFlowers = Array.isArray(flowersResponse) ? flowersResponse : [];
-            }
-            
-            const flowerToAdjust = warehouseFlowers.find(f => f.flower === adjustment.flower);
-            
-            if (flowerToAdjust) {
-              // Calculate new amount
-              let newAmount = flowerToAdjust.amount;
-              
-              if (adjustment.action === 'return') {
-                // Return flowers to inventory
-                newAmount += adjustment.amount;
-              } else if (adjustment.action === 'take') {
-                // Take flowers from inventory
-                newAmount = Math.max(0, newAmount - adjustment.amount);
-              }
-              
-              console.log(`Adjusting ${adjustment.flower} inventory: ${flowerToAdjust.amount} -> ${newAmount}`);
-              
-              // Update flower inventory
-              await apiRequest('PUT', `/api/flowers/${flowerToAdjust.id}`, {
-                amount: newAmount
-              });
-            }
-          }
-        }
-        
-        return orderResponse;
-      } catch (error) {
-        console.error("Error in updateOrderMutation:", error);
-        throw error;
-      }
+      // Just send the update to the server - no client-side inventory adjustments
+      const orderResponse = await apiRequest('PUT', `/api/orders/${orderId}`, data);
+      return orderResponse;
     },
     onSuccess: async () => {
-      try {
-        // Invalidate and refetch queries in sequence
-        await queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-        await queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
-        
-        // Force refetch the flowers data
-        await queryClient.refetchQueries({ queryKey: ['/api/flowers'] });
-        
-        toast({
-          title: "Обновление заказа",
-          description: "Заказ был успешно обновлён",
-        });
-        
-        // Add a delay to ensure data is refreshed before navigation
-        setTimeout(() => {
-          navigate("/active-orders");
-        }, 500);
-      } catch (error) {
-        console.error("Error in onSuccess callback:", error);
-      }
+      // Invalidate and refetch queries in sequence
+      await queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
+      
+      // Force refetch the flowers data
+      await queryClient.refetchQueries({ queryKey: ['/api/flowers'] });
+      
+      toast({
+        title: "Обновление заказа",
+        description: "Заказ был успешно обновлён",
+      });
+      
+      // Add a delay to ensure data is refreshed before navigation
+      setTimeout(() => {
+        navigate("/active-orders");
+      }, 500);
     },
     onError: (error) => {
       toast({
@@ -254,6 +206,7 @@ export default function Warehouse() {
       console.error("Error updating order:", error);
     }
   });
+  
   
   
   const clearWriteoffsMutation = useMutation({

@@ -68,46 +68,11 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
     }
   });
 
-  
   // Add this mutation for deleting an order
   const deleteOrderMutation = useMutation({
     mutationFn: async (orderId: number) => {
-      try {
-        // First, get the order items to know what to return to inventory
-        const itemsResponse = await apiRequest('GET', `/api/orders/${orderId}/items`);
-        let orderItems = [];
-        
-        // Parse the response if needed
-        if (itemsResponse instanceof Response) {
-          orderItems = await itemsResponse.json();
-        } else {
-          orderItems = itemsResponse;
-        }
-        
-        console.log("Order items to return to inventory:", orderItems);
-        
-        // Delete the order
-        await apiRequest('DELETE', `/api/orders/${orderId}`);
-        
-        // Return flowers to inventory
-        if (orderItems && Array.isArray(orderItems) && orderItems.length > 0) {
-          // Process each order item
-          for (const item of orderItems) {
-            // Use the same endpoint that's used in Warehouse.tsx for adding flowers
-            await apiRequest('POST', '/api/flowers', {
-              flower: item.flower,
-              amount: item.amount
-            });
-            
-            console.log(`Returned ${item.amount} of ${item.flower} to inventory`);
-          }
-        }
-        
-        return orderId;
-      } catch (error) {
-        console.error("Error in deleteOrderMutation:", error);
-        throw error;
-      }
+      // Let the server handle inventory adjustments
+      return await apiRequest('DELETE', `/api/orders/${orderId}`);
     },
     onSuccess: (orderId) => {
       // Invalidate and refetch both queries

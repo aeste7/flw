@@ -252,156 +252,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/orders/:id', async (req: Request, res: Response) => {
     try {
+      console.log("=== START ORDER UPDATE ===");
       const orderId = Number(req.params.id);
+      console.log(`Updating order ID: ${orderId}`);
+      
       const validatedData = insertOrderSchema.partial().extend({
         dateTime: z.string().transform(val => new Date(val)).optional(),
       }).parse(req.body.order);
       
-      const items = req.body.items || [];
+      console.log("Validated order data:", validatedData);
       
-      // First, get the current order items to compare with the new ones
+      const newItems = req.body.items || [];
+      console.log("New items from request:", newItems);
+      
+      // First, get the current order items
       const currentItems = await storage.getOrderItems(orderId);
+      console.log("Current items in order:", currentItems);
       
       // Update the order details
       const updatedOrder = await storage.updateOrder(orderId, validatedData);
       if (!updatedOrder) {
+        console.log("Order not found");
         return res.status(404).json({ message: 'Заказ не найден' });
       }
       
-      // Create maps for easier comparison
-      const currentItemsMap = new Map();
-      currentItems.forEach(item => {
-        currentItemsMap.set(item.flower, { id: item.id, amount: item.amount });
-      });
+      // Log the current inventory state
+      const beforeInventory = await storage.getFlowers();
+      console.log("Inventory BEFORE adjustments:", beforeInventory);
       
-      const newItemsMap = new Map();
-      items.forEach(item => {
-        newItemsMap.set(item.flower, { amount: item.amount });
-      });
+      console.log("=== PROCESSING INVENTORY ADJUSTMENTS ===");
       
-      // Process inventory adjustments
-      
-      // 1. Handle removed or modified items
-      for (const [flowerName, itemData] of currentItemsMap.entries()) {
-        const newItem = newItemsMap.get(flowerName);
+      // STEP 1: Return all current items to inventory
+      for (const item of currentItems) {
+        console.log(`Returning ${item.amount} of ${item.flower} to inventory`);
         
-        if (!newItem) {
-          // Item was removed, return all to inventory
-          const flower = await storage.getFlowerByName(flowerName);
-          if (flower) {
-            await storage.updateFlowers(flower.id, { 
-              amount: flower.amount + itemData.amount 
-            });
-          } else {
-            // Flower doesn't exist in inventory, create it
-            await storage.addFlowers({ flower: flowerName, amount: itemData.amount });
-          }
-          
-          // Delete the order item
-          await storage.deleteOrderItem(itemData.id);
-        } 
-        else if (newItem.amount < itemData.amount) {
-          // Item quantity was reduced, return difference to inventory
-          const returnAmount = itemData.amount - newItem.amount;
-          const flower = await storage.getFlowerByName(flowerName);
-          
-          if (flower) {
-            await storage.updateFlowers(flower.id, { 
-              amount: flower.amount + returnAmount 
-            });
-          } else {
-            // Flower doesn't exist in inventory, create it
-            await storage.addFlowers({ flower: flowerName, amount: returnAmount });
-          }
-          
-          // Delete the old item and create a new one with updated amount
-          // since we don't have updateOrderItem function
-          await storage.deleteOrderItem(itemData.id);
-          await storage.createOrderItem({
-            orderId,
-            flower: flowerName,
-            amount: newItem.amount
-          });
+        const flower = await storage.getFlowerByName(item.flower);
+        if (flower) {
+          const updatedAmount = flower.amount + item.amount;
+          console.log(`Updating inventory for ${item.flower}. New amount: ${updatedAmount}`);
+          await storage.updateFlowers(flower.id, { amount: updatedAmount });
+        } else {
+          console.log(`Flower ${item.flower} not found in inventory, creating new entry with amount ${item.amount}`);
+          await storage.addFlowers({ flower: item.flower, amount: item.amount });
         }
-        else if (newItem.amount > itemData.amount) {
-          // Item quantity was increased, take from inventory
-          const takeAmount = newItem.amount - itemData.amount;
-          const flower = await storage.getFlowerByName(flowerName);
-          
-          if (flower) {
-            if (flower.amount >= takeAmount) {
-              await storage.updateFlowers(flower.id, { 
-                amount: flower.amount - takeAmount 
-              });
-            } else {
-              return res.status(400).json({ 
-                message: `Недостаточно цветов: ${flowerName}` 
-              });
-            }
-          } else {
-            return res.status(400).json({ 
-              message: `Цветы не найдены: ${flowerName}` 
-            });
-          }
-          
-          // Delete the old item and create a new one with updated amount
-          await storage.deleteOrderItem(itemData.id);
-          await storage.createOrderItem({
-            orderId,
-            flower: flowerName,
-            amount: newItem.amount
-          });
-        }
-        // If the amount is the same, we don't need to do anything
+        
+        // Delete the order item
+        console.log(`Deleting order item ID: ${item.id}`);
+        await storage.deleteOrderItem(item.id);
       }
       
-      // 2. Handle new items
-      for (const [flowerName, itemData] of newItemsMap.entries()) {
-        if (!currentItemsMap.has(flowerName)) {
-          // New item, take from inventory
-          const flower = await storage.getFlowerByName(flowerName);
+      // STEP 2: Take all new items from inventory and create new order items
+      for (const item of newItems) {
+        if (item.amount > 0) {
+          console.log(`Processing new item: ${item.flower}, amount: ${item.amount}`);
           
+          // Take from inventory
+          const flower = await storage.getFlowerByName(item.flower);
           if (flower) {
-            if (flower.amount >= itemData.amount) {
-              await storage.updateFlowers(flower.id, { 
-                amount: flower.amount - itemData.amount 
+            if (flower.amount >= item.amount) {
+              const updatedAmount = flower.amount - item.amount;
+              console.log(`Taking ${item.amount} of ${item.flower} from inventory. New amount: ${updatedAmount}`);
+              await storage.updateFlowers(flower.id, { amount: updatedAmount });
+              
+              // Create the new order item
+              console.log(`Creating new order item: ${item.flower}, amount: ${item.amount}`);
+              
+              // IMPORTANT: We need to use a direct database operation to avoid automatic inventory adjustments
+              // Since we don't have access to modify the storage implementation, we'll use a workaround
+              
+              // First, add the amount back to inventory to compensate for the automatic deduction
+              await storage.updateFlowers(flower.id, { amount: updatedAmount + item.amount });
+              console.log(`Compensated inventory for ${item.flower}. Temporary amount: ${updatedAmount + item.amount}`);
+              
+              // Then create the order item (which will automatically deduct from inventory)
+              await storage.createOrderItem({
+                orderId,
+                flower: item.flower,
+                amount: item.amount
               });
             } else {
+              console.log(`Not enough ${item.flower} in inventory. Required: ${item.amount}, Available: ${flower.amount}`);
+              
+              // Rollback all inventory changes
+              console.log("Rolling back inventory changes...");
+              
+              // Return all items to inventory
+              for (const newItem of newItems) {
+                const newFlower = await storage.getFlowerByName(newItem.flower);
+                if (newFlower) {
+                  await storage.updateFlowers(newFlower.id, { 
+                    amount: newFlower.amount + newItem.amount 
+                  });
+                }
+              }
+              
               return res.status(400).json({ 
-                message: `Недостаточно цветов: ${flowerName}` 
+                message: `Недостаточно цветов: ${item.flower}` 
               });
             }
-            
-            // Create the new order item
-            await storage.createOrderItem({
-              orderId,
-              flower: flowerName,
-              amount: itemData.amount
-            });
           } else {
+            console.log(`Flower ${item.flower} not found in inventory`);
             return res.status(400).json({ 
-              message: `Цветы не найдены: ${flowerName}` 
+              message: `Цветы не найдены: ${item.flower}` 
             });
           }
         }
       }
+      
+      // Log the final inventory state
+      const afterInventory = await storage.getFlowers();
+      console.log("Inventory AFTER adjustments:", afterInventory);
       
       // Get the updated order with items
       const updatedOrderWithItems = await storage.getOrder(orderId);
+      console.log("Updated order:", updatedOrderWithItems);
+      
+      console.log("=== END ORDER UPDATE ===");
       return res.json(updatedOrderWithItems);
     } catch (error) {
+      console.error('Ошибка обновления заказа', error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ errors: error.errors });
       }
-      console.error('Ошибка обновления заказа', error);
       return res.status(500).json({ message: 'Не удалось обновить заказ' });  
     }
   });
+    
   
 
   app.delete('/api/orders/:id', async (req: Request, res: Response) => {
     try {
-      const success = await storage.deleteOrder(Number(req.params.id));
+      const orderId = Number(req.params.id);
+      
+      // Get the order items before deleting the order
+      const orderItems = await storage.getOrderItems(orderId);
+      
+      // Return flowers to inventory
+      for (const item of orderItems) {
+        const flower = await storage.getFlowerByName(item.flower);
+        if (flower) {
+          // Return flowers to inventory
+          await storage.updateFlowers(flower.id, { 
+            amount: flower.amount + item.amount 
+          });
+        } else {
+          // Flower doesn't exist in inventory, create it
+          await storage.addFlowers({ 
+            flower: item.flower, 
+            amount: item.amount 
+          });
+        }
+      }
+      
+      // Now delete the order
+      const success = await storage.deleteOrder(orderId);
       
       if (!success) {
         return res.status(404).json({ message: 'Заказ не найден' });
@@ -413,6 +417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Не удалось удалить заказ' });
     }
   });
+  
 
   // Add a new endpoint to delete all writeoffs
   app.delete('/api/writeoffs', async (req: Request, res: Response) => {
