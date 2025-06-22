@@ -15,6 +15,8 @@ const headerTitles: HeaderTitles = {
   "/": "Цветочный менеджер",
   "/new-order": "Новый заказ",
   "/active-orders": "Активные заказы",
+  "/bouquets": "Букеты",
+  "/new-bouquet": "Создать букет",
   "/warehouse": "Склад",
   "/notes": "Заметки",
 };

@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Home, PlusCircle, ListChecks, PackageOpen, FileText } from "lucide-react";
+import { Home, PlusCircle, ListChecks, PackageOpen, FileText, Flower } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query"; // Add this import
 
 export default function BottomNavigation() {
@@ -17,13 +17,14 @@ export default function BottomNavigation() {
     { name: "Главная", icon: <Home className="h-6 w-6" />, path: "/" },
     { name: "Новый заказ", icon: <PlusCircle className="h-6 w-6" />, path: "/new-order" },
     { name: "Все заказы", icon: <ListChecks className="h-6 w-6" />, path: "/active-orders" },
+    { name: "Букеты", icon: <Flower className="h-6 w-6" />, path: "/bouquets" },
     { name: "Склад", icon: <PackageOpen className="h-6 w-6" />, path: "/warehouse", customNavigate: navigateToWarehouse },
     { name: "Заметки", icon: <FileText className="h-6 w-6" />, path: "/notes" },
   ];
   
   return (
     <footer className="bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-10">
-      <div className="max-w-3xl mx-auto grid grid-cols-5">
+      <div className="max-w-3xl mx-auto grid grid-cols-6">
         {navItems.map((item) => (
           <button
             key={item.name}

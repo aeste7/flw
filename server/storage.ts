@@ -4,9 +4,23 @@ import {
   Note, InsertNote,
   Order, InsertOrder,
   OrderItem, InsertOrderItem,
+  Bouquet, InsertBouquet,
+  BouquetItem, InsertBouquetItem,
   User, InsertUser,
   OrderStatus
 } from "@shared/schema";
+import { db } from "./db";
+import { 
+  warehouse as warehouseTable,
+  writeoffs as writeoffsTable,
+  notes as notesTable,
+  orders as ordersTable,
+  orderItems as orderItemsTable,
+  bouquets as bouquetsTable,
+  bouquetItems as bouquetItemsTable,
+  users as usersTable
+} from "@shared/schema";
+import { and, eq, desc } from "drizzle-orm";
 
 // Modify the interface with any CRUD methods
 // you might need
@@ -48,6 +62,20 @@ export interface IStorage {
   getOrderItems(orderId: number): Promise<OrderItem[]>;
   createOrderItem(item: InsertOrderItem): Promise<OrderItem>;
   deleteOrderItem(id: number): Promise<boolean>;
+
+  // Bouquets methods
+  getBouquets(): Promise<Bouquet[]>;
+  getBouquet(id: number): Promise<Bouquet | undefined>;
+  createBouquet(bouquet: InsertBouquet, items: InsertBouquetItem[]): Promise<Bouquet>;
+  updateBouquet(id: number, bouquet: Partial<InsertBouquet>): Promise<Bouquet | undefined>;
+  deleteBouquet(id: number): Promise<boolean>;
+  sellBouquet(id: number): Promise<boolean>;
+  disassembleBouquet(id: number): Promise<boolean>;
+
+  // Bouquet Items methods
+  getBouquetItems(bouquetId: number): Promise<BouquetItem[]>;
+  createBouquetItem(item: InsertBouquetItem): Promise<BouquetItem>;
+  deleteBouquetItem(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -57,12 +85,16 @@ export class MemStorage implements IStorage {
   private notes: Map<number, Note>;
   private orders: Map<number, Order>;
   private orderItems: Map<number, OrderItem>;
+  private bouquets: Map<number, Bouquet>;
+  private bouquetItems: Map<number, BouquetItem>;
   private currentUserId: number;
   private currentWarehouseId: number;
   private currentWriteoffId: number;
   private currentNoteId: number;
   private currentOrderId: number;
   private currentOrderItemId: number;
+  private currentBouquetId: number;
+  private currentBouquetItemId: number;
 
   constructor() {
     this.users = new Map();
@@ -71,12 +103,16 @@ export class MemStorage implements IStorage {
     this.notes = new Map();
     this.orders = new Map();
     this.orderItems = new Map();
+    this.bouquets = new Map();
+    this.bouquetItems = new Map();
     this.currentUserId = 1;
     this.currentWarehouseId = 1;
     this.currentWriteoffId = 1;
     this.currentNoteId = 1;
     this.currentOrderId = 1;
     this.currentOrderItemId = 1;
+    this.currentBouquetId = 1;
+    this.currentBouquetItemId = 1;
     
     // Initialize with some sample data
     this.initSampleData();
@@ -177,6 +213,10 @@ export class MemStorage implements IStorage {
     return updatedFlower;
   }
 
+  async deleteFlower(id: number): Promise<boolean> {
+    return this.warehouse.delete(id);
+  }
+
   // Writeoffs methods
   async getWriteoffs(): Promise<Writeoff[]> {
     return Array.from(this.writeoffs.values());
@@ -262,7 +302,10 @@ export class MemStorage implements IStorage {
       ...insertOrder, 
       id,
       status: insertOrder.status || OrderStatus.New,
-      notes: insertOrder.notes || null
+      notes: insertOrder.notes || null,
+      timeFrom: insertOrder.timeFrom || null,
+      timeTo: insertOrder.timeTo || null,
+      pickup: insertOrder.pickup || false
     };
     
     this.orders.set(id, order);
@@ -306,15 +349,9 @@ export class MemStorage implements IStorage {
     const order = this.orders.get(id);
     if (!order) return undefined;
 
-    // Ensure notes is properly set to null if undefined
-    const processedUpdate = {
-      ...orderUpdate,
-      notes: orderUpdate.notes === undefined ? order.notes : orderUpdate.notes
-    };
-
     const updatedOrder = {
       ...order,
-      ...processedUpdate,
+      ...orderUpdate,
     };
     
     this.orders.set(id, updatedOrder);
@@ -359,18 +396,131 @@ export class MemStorage implements IStorage {
   async deleteOrderItem(id: number): Promise<boolean> {
     return this.orderItems.delete(id);
   }
-}
 
-import { db } from "./db";
-import { 
-  warehouse as warehouseTable,
-  writeoffs as writeoffsTable,
-  notes as notesTable,
-  orders as ordersTable,
-  orderItems as orderItemsTable,
-  users as usersTable
-} from "@shared/schema";
-import { and, eq, desc } from "drizzle-orm";
+  // Bouquets methods
+  async getBouquets(): Promise<Bouquet[]> {
+    return Array.from(this.bouquets.values());
+  }
+
+  async getBouquet(id: number): Promise<Bouquet | undefined> {
+    return this.bouquets.get(id);
+  }
+
+  async createBouquet(bouquet: InsertBouquet, items: InsertBouquetItem[]): Promise<Bouquet> {
+    const id = this.currentBouquetId++;
+    const newBouquet: Bouquet = {
+      ...bouquet,
+      id,
+      dateTime: new Date(),
+      photo: bouquet.photo || null
+    };
+    
+    this.bouquets.set(id, newBouquet);
+    
+    // Create bouquet items and update warehouse
+    for (const item of items) {
+      const bouquetItem: BouquetItem = {
+        ...item,
+        bouquetId: id,
+        id: this.currentBouquetItemId++
+      };
+      
+      this.bouquetItems.set(bouquetItem.id, bouquetItem);
+      
+      // Update warehouse inventory
+      const flower = await this.getFlowerByName(item.flower);
+      if (flower) {
+        const updatedAmount = Math.max(0, flower.amount - item.amount);
+        await this.updateFlowers(flower.id, { amount: updatedAmount });
+      }
+    }
+    
+    return newBouquet;
+  }
+
+  async updateBouquet(id: number, bouquetUpdate: Partial<InsertBouquet>): Promise<Bouquet | undefined> {
+    const bouquet = this.bouquets.get(id);
+    if (!bouquet) return undefined;
+
+    const updatedBouquet = {
+      ...bouquet,
+      ...bouquetUpdate,
+    };
+    
+    this.bouquets.set(id, updatedBouquet);
+    return updatedBouquet;
+  }
+
+  async deleteBouquet(id: number): Promise<boolean> {
+    const bouquet = this.bouquets.get(id);
+    if (!bouquet) return false;
+    
+    // Delete all bouquet items
+    const items = await this.getBouquetItems(id);
+    for (const item of items) {
+      this.bouquetItems.delete(item.id);
+    }
+    
+    this.bouquets.delete(id);
+    return true;
+  }
+
+  async sellBouquet(id: number): Promise<boolean> {
+    // Simply delete the bouquet (sold)
+    return this.deleteBouquet(id);
+  }
+
+  async disassembleBouquet(id: number): Promise<boolean> {
+    const bouquet = this.bouquets.get(id);
+    if (!bouquet) return false;
+    
+    // Get all bouquet items
+    const items = await this.getBouquetItems(id);
+    
+    // Return flowers to warehouse
+    for (const item of items) {
+      const flower = await this.getFlowerByName(item.flower);
+      if (flower) {
+        await this.updateFlowers(flower.id, { 
+          amount: flower.amount + item.amount 
+        });
+      }
+    }
+    
+    // Delete the bouquet
+    return this.deleteBouquet(id);
+  }
+
+  // Bouquet Items methods
+  async getBouquetItems(bouquetId: number): Promise<BouquetItem[]> {
+    return Array.from(this.bouquetItems.values()).filter(
+      (item) => item.bouquetId === bouquetId
+    );
+  }
+
+  async createBouquetItem(item: InsertBouquetItem): Promise<BouquetItem> {
+    const id = this.currentBouquetItemId++;
+    const bouquetItem: BouquetItem = {
+      ...item,
+      id
+    };
+    
+    this.bouquetItems.set(id, bouquetItem);
+    
+    // Update warehouse inventory
+    const flower = await this.getFlowerByName(item.flower);
+    if (flower) {
+      const updatedAmount = Math.max(0, flower.amount - item.amount);
+      await this.updateFlowers(flower.id, { amount: updatedAmount });
+    }
+    
+    return bouquetItem;
+  }
+
+  async deleteBouquetItem(id: number): Promise<boolean> {
+    return this.bouquetItems.delete(id);
+  }
+}
 
 export class DatabaseStorage implements IStorage {
   // User methods
@@ -436,23 +586,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteFlower(id: number): Promise<boolean> {
-    try {
-      console.log("Storage: Deleting flower with ID:", id);
-      
-      const result = await db
-        .delete(warehouseTable)
-        .where(eq(warehouseTable.id, id))
-        .returning({ id: warehouseTable.id });
-      
-      console.log("Storage: Delete result:", result);
-      
-      return result.length > 0;
-    } catch (error) {
-      console.error("Error deleting flower:", error);
-      throw error;
-    }
+    const result = await db
+      .delete(warehouseTable)
+      .where(eq(warehouseTable.id, id))
+      .returning({ id: warehouseTable.id });
+    
+    return result.length > 0;
   }
-  
 
   async updateFlowers(id: number, flowerUpdate: Partial<InsertWarehouse>): Promise<Warehouse | undefined> {
     const [updatedFlower] = await db
@@ -492,13 +632,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async clearWriteoffs(): Promise<boolean> {
-    try {
-      await db.delete(writeoffsTable).execute();
-      return true;
-    } catch (error) {
-      console.error("Error clearing writeoffs:", error);
-      throw error;
-    }
+    await db.delete(writeoffsTable);
+    return true;
   }
   
   // Notes methods
@@ -559,7 +694,7 @@ export class DatabaseStorage implements IStorage {
     const [order] = await db
       .insert(ordersTable)
       .values({
-        ...insertOrder,
+        ...insertOrder, 
         status: insertOrder.status || OrderStatus.New
       })
       .returning();
@@ -595,28 +730,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateOrder(id: number, orderUpdate: Partial<InsertOrder>): Promise<Order | undefined> {
-    // Get current order to properly handle notes
-    const currentOrder = await this.getOrder(id);
-    if (!currentOrder) return undefined;
-    
-    // Process the update to ensure notes is properly handled
-    const processedUpdate = {
-      ...orderUpdate,
-      notes: orderUpdate.notes === undefined ? currentOrder.notes : orderUpdate.notes,
-      // Handle the new time period fields
-      timeFrom: orderUpdate.timeFrom === undefined ? currentOrder.timeFrom : orderUpdate.timeFrom,
-      timeTo: orderUpdate.timeTo === undefined ? currentOrder.timeTo : orderUpdate.timeTo,
-    };
-    
     const [updatedOrder] = await db
       .update(ordersTable)
-      .set(processedUpdate)
+      .set(orderUpdate)
       .where(eq(ordersTable.id, id))
       .returning();
     
     return updatedOrder || undefined;
   }
- 
+
   async deleteOrder(id: number): Promise<boolean> {
     // Mark as deleted instead of removing
     const result = await this.updateOrderStatus(id, OrderStatus.Deleted);
@@ -652,6 +774,130 @@ export class DatabaseStorage implements IStorage {
       .delete(orderItemsTable)
       .where(eq(orderItemsTable.id, id))
       .returning({ id: orderItemsTable.id });
+    
+    return result.length > 0;
+  }
+
+  // Bouquets methods
+  async getBouquets(): Promise<Bouquet[]> {
+    return await db.select().from(bouquetsTable).orderBy(desc(bouquetsTable.dateTime));
+  }
+
+  async getBouquet(id: number): Promise<Bouquet | undefined> {
+    const [bouquet] = await db.select().from(bouquetsTable).where(eq(bouquetsTable.id, id));
+    return bouquet || undefined;
+  }
+
+  async createBouquet(bouquet: InsertBouquet, items: InsertBouquetItem[]): Promise<Bouquet> {
+    // Create the bouquet
+    const [newBouquet] = await db
+      .insert(bouquetsTable)
+      .values({
+        ...bouquet,
+        dateTime: new Date(),
+        photo: bouquet.photo || null
+      })
+      .returning();
+    
+    // Add bouquet items
+    for (const item of items) {
+      await db
+        .insert(bouquetItemsTable)
+        .values({
+          ...item,
+          bouquetId: newBouquet.id
+        });
+      
+      // Update warehouse inventory
+      const flower = await this.getFlowerByName(item.flower);
+      if (flower) {
+        const updatedAmount = Math.max(0, flower.amount - item.amount);
+        await this.updateFlowers(flower.id, { amount: updatedAmount });
+      }
+    }
+    
+    return newBouquet;
+  }
+
+  async updateBouquet(id: number, bouquetUpdate: Partial<InsertBouquet>): Promise<Bouquet | undefined> {
+    const [updatedBouquet] = await db
+      .update(bouquetsTable)
+      .set({ 
+        ...bouquetUpdate,
+      })
+      .where(eq(bouquetsTable.id, id))
+      .returning();
+    
+    return updatedBouquet || undefined;
+  }
+
+  async deleteBouquet(id: number): Promise<boolean> {
+    // Delete all bouquet items first
+    await db
+      .delete(bouquetItemsTable)
+      .where(eq(bouquetItemsTable.bouquetId, id));
+    
+    // Delete the bouquet
+    const result = await db
+      .delete(bouquetsTable)
+      .where(eq(bouquetsTable.id, id))
+      .returning({ id: bouquetsTable.id });
+    
+    return result.length > 0;
+  }
+
+  async sellBouquet(id: number): Promise<boolean> {
+    // Simply delete the bouquet (sold)
+    return this.deleteBouquet(id);
+  }
+
+  async disassembleBouquet(id: number): Promise<boolean> {
+    // Get all bouquet items
+    const items = await this.getBouquetItems(id);
+    
+    // Return flowers to warehouse
+    for (const item of items) {
+      const flower = await this.getFlowerByName(item.flower);
+      if (flower) {
+        await this.updateFlowers(flower.id, { 
+          amount: flower.amount + item.amount 
+        });
+      }
+    }
+    
+    // Delete the bouquet
+    return this.deleteBouquet(id);
+  }
+
+  // Bouquet Items methods
+  async getBouquetItems(bouquetId: number): Promise<BouquetItem[]> {
+    return await db
+      .select()
+      .from(bouquetItemsTable)
+      .where(eq(bouquetItemsTable.bouquetId, bouquetId));
+  }
+
+  async createBouquetItem(item: InsertBouquetItem): Promise<BouquetItem> {
+    const [bouquetItem] = await db
+      .insert(bouquetItemsTable)
+      .values(item)
+      .returning();
+    
+    // Update warehouse inventory
+    const flower = await this.getFlowerByName(item.flower);
+    if (flower) {
+      const updatedAmount = Math.max(0, flower.amount - item.amount);
+      await this.updateFlowers(flower.id, { amount: updatedAmount });
+    }
+    
+    return bouquetItem;
+  }
+
+  async deleteBouquetItem(id: number): Promise<boolean> {
+    const result = await db
+      .delete(bouquetItemsTable)
+      .where(eq(bouquetItemsTable.id, id))
+      .returning({ id: bouquetItemsTable.id });
     
     return result.length > 0;
   }

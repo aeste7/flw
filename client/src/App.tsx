@@ -11,6 +11,9 @@ import ActiveOrders from "@/pages/ActiveOrders";
 import Warehouse from "@/pages/Warehouse";
 import Notes from "@/pages/Notes";
 import WriteOff from "@/pages/WriteOff";
+import Bouquets from "@/pages/Bouquets";
+import NewBouquet from "@/pages/NewBouquet";
+import BouquetDetail from "@/pages/BouquetDetail";
 import Layout from "@/components/Layout";
 import { ThemeProvider } from "next-themes";
 import { useEffect } from "react";
@@ -27,6 +30,9 @@ function Router() {
         <Route path="/notes" component={Notes} />
         <Route path="/write-off/:id" component={WriteOff} />
         <Route path="/edit-order/:id" component={EditOrder} />
+        <Route path="/bouquets" component={Bouquets} />
+        <Route path="/new-bouquet" component={NewBouquet} />
+        <Route path="/bouquet/:id" component={BouquetDetail} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

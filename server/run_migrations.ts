@@ -1,4 +1,5 @@
-import { addPickupToOrders } from "./migrations/add_pickup_to_orders";
+import { addPickupToOrders } from "./add_pickup_to_orders";
+import { addBouquetTables } from "./add_bouquet_tables";
 
 async function runMigrations() {
   try {
@@ -6,6 +7,7 @@ async function runMigrations() {
     
     // Run migrations in sequence
     await addPickupToOrders();
+    await addBouquetTables();
     
     console.log("All migrations completed successfully");
     process.exit(0);

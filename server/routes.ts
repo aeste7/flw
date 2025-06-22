@@ -7,6 +7,8 @@ import {
   insertOrderItemSchema,
   insertWarehouseSchema,
   insertWriteoffSchema,
+  insertBouquetSchema,
+  insertBouquetItemSchema,
   OrderStatus
 } from "@shared/schema";
 import { z } from "zod";
@@ -448,6 +450,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Ошибка при удалении цветов:', error);
       return res.status(500).json({ message: 'Не удалось удалить цветы' });
+    }
+  });
+
+  // Bouquets routes
+  app.get('/api/bouquets', async (req: Request, res: Response) => {
+    try {
+      const bouquets = await storage.getBouquets();
+      return res.json(bouquets);
+    } catch (error) {
+      console.error('Ошибка при получении списка букетов', error);
+      return res.status(500).json({ message: 'Не удалось получить список букетов' });
+    }
+  });
+
+  app.get('/api/bouquets/:id', async (req: Request, res: Response) => {
+    try {
+      const bouquet = await storage.getBouquet(Number(req.params.id));
+      if (!bouquet) {
+        return res.status(404).json({ message: 'Букет не найден' });
+      }
+      return res.json(bouquet);
+    } catch (error) {
+      console.error('Ошибка при получении букета', error);
+      return res.status(500).json({ message: 'Не удалось получить букет' });
+    }
+  });
+
+  app.get('/api/bouquets/:id/items', async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getBouquetItems(Number(req.params.id));
+      return res.json(items);
+    } catch (error) {
+      console.error('Ошибка при получении данных букета:', error);
+      return res.status(500).json({ message: 'Не удалось получить данные букета' });
+    }
+  });
+
+  app.post('/api/bouquets', async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertBouquetSchema.parse(req.body.bouquet);
+      const items = req.body.items || [];
+      
+      const bouquet = await storage.createBouquet(validatedData, items);
+      return res.status(201).json(bouquet);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      console.error('Ошибка при создании букета:', error);
+      return res.status(500).json({ message: 'Не удалось создать букет' });
+    }
+  });
+
+  app.put('/api/bouquets/:id', async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertBouquetSchema.partial().parse(req.body);
+      const updatedBouquet = await storage.updateBouquet(Number(req.params.id), validatedData);
+      if (!updatedBouquet) {
+        return res.status(404).json({ message: 'Букет не найден' });
+      }
+      return res.json(updatedBouquet);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      console.error('Ошибка при обновлении букета:', error);
+      return res.status(500).json({ message: 'Не удалось обновить букет' });
+    }
+  });
+
+  app.delete('/api/bouquets/:id', async (req: Request, res: Response) => {
+    try {
+      const success = await storage.deleteBouquet(Number(req.params.id));
+      if (!success) {
+        return res.status(404).json({ message: 'Букет не найден' });
+      }
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('Ошибка при удалении букета:', error);
+      return res.status(500).json({ message: 'Не удалось удалить букет' });
+    }
+  });
+
+  app.post('/api/bouquets/:id/sell', async (req: Request, res: Response) => {
+    try {
+      const success = await storage.sellBouquet(Number(req.params.id));
+      if (!success) {
+        return res.status(404).json({ message: 'Букет не найден' });
+      }
+      return res.json({ success: true, message: 'Букет продан' });
+    } catch (error) {
+      console.error('Ошибка при продаже букета:', error);
+      return res.status(500).json({ message: 'Не удалось продать букет' });
+    }
+  });
+
+  app.post('/api/bouquets/:id/disassemble', async (req: Request, res: Response) => {
+    try {
+      const success = await storage.disassembleBouquet(Number(req.params.id));
+      if (!success) {
+        return res.status(404).json({ message: 'Букет не найден' });
+      }
+      return res.json({ success: true, message: 'Букет разобран, цветы возвращены на склад' });
+    } catch (error) {
+      console.error('Ошибка при разборе букета:', error);
+      return res.status(500).json({ message: 'Не удалось разобрать букет' });
     }
   });
 
