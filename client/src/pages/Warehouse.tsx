@@ -16,6 +16,7 @@ import FlowerItem from "@/components/FlowerItem";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 import { 
   Card, 
   CardContent, 
@@ -240,7 +241,7 @@ export default function Warehouse() {
   // Format date for display
   const formatDate = (dateTime: string | Date) => {
     const date = typeof dateTime === 'string' ? new Date(dateTime) : dateTime;
-    return format(date, "MMMM d, yyyy 'at' h:mm a");
+    return format(date, "MMMM d, yyyy 'в' h:mm a", { locale: ru });
   };
 
   // Handle write-off

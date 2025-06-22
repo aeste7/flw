@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 
 interface NoteItemProps {
   note: Note;
@@ -93,7 +94,7 @@ export default function NoteItem({ note }: NoteItemProps) {
   
   // Format date
   const formatDate = (date: Date | string) => {
-    return format(new Date(date), "MMMM d, yyyy");
+    return format(new Date(date), "d MMMM yyyy", { locale: ru });
   };
   
   return (

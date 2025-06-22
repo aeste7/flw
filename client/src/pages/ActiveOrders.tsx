@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Order, OrderStatus, OrderItem as OrderItemType, Warehouse } from "@shared/schema";
 import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 import OrderItem from "@/components/OrderItem";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -288,7 +289,7 @@ export default function ActiveOrders() {
     
     sortedOrders.forEach(order => {
       const date = new Date(order.dateTime);
-      const dateKey = format(date, "yyyy-MM-dd");
+      const dateKey = format(date, "yyyy-MM-dd", { locale: ru });
       
       if (!groupedOrders[dateKey]) {
         groupedOrders[dateKey] = [];
@@ -334,11 +335,11 @@ export default function ActiveOrders() {
     const date = new Date(dateString);
     
     if (format(date, "yyyy-MM-dd") === format(today, "yyyy-MM-dd")) {
-      return `Today - ${format(date, "MMMM d, yyyy")}`;
+      return `Сегодня - ${format(date, "d MMMM yyyy", { locale: ru })}`;
     } else if (format(date, "yyyy-MM-dd") === format(tomorrow, "yyyy-MM-dd")) {
-      return `Tomorrow - ${format(date, "MMMM d, yyyy")}`;
+      return `Завтра - ${format(date, "d MMMM yyyy", { locale: ru })}`;
     } else {
-      return format(date, "MMMM d, yyyy");
+      return format(date, "d MMMM yyyy", { locale: ru });
     }
   };
   
@@ -407,7 +408,7 @@ export default function ActiveOrders() {
   // Format date time for display
   const formatDateTime = (dateTime: string | Date) => {
     const date = typeof dateTime === 'string' ? new Date(dateTime) : dateTime;
-    return format(date, "MMMM d, yyyy 'at' h:mm a");
+    return format(date, "d MMMM yyyy 'в' h:mm a", { locale: ru });
   };
   
   return (
@@ -591,13 +592,13 @@ export default function ActiveOrders() {
                     <span>{viewOrder.address}</span>
                     
                     <span className="text-gray-500">Дата:</span>
-                    <span>{format(new Date(viewOrder.dateTime), "d MMMM yyyy")}</span>
+                    <span>{format(new Date(viewOrder.dateTime), "d MMMM yyyy", { locale: ru })}</span>
                     
                     <span className="text-gray-500">Время:</span>
                     <span>
                       {viewOrder.timeFrom && viewOrder.timeTo 
                         ? `${viewOrder.timeFrom} - ${viewOrder.timeTo}`
-                        : format(new Date(viewOrder.dateTime), "HH:mm")}
+                        : format(new Date(viewOrder.dateTime), "HH:mm", { locale: ru })}
                     </span>
                     
                     <span className="text-gray-500">Тип:</span>

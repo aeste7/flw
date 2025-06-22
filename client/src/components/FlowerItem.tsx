@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Warehouse } from "@shared/schema";
 import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 import { MoreVertical, Edit, Plus, Trash, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -58,7 +59,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
   
   // Format date
   const formatDate = (date: Date | string) => {
-    return format(new Date(date), "MMMM d, yyyy");
+    return format(new Date(date), "d MMMM yyyy", { locale: ru });
   };
   
   // Update flower mutation

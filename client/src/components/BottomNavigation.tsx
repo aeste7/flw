@@ -14,9 +14,9 @@ export default function BottomNavigation() {
   };
   
   const navItems = [
-    { name: "Домашняя", icon: <Home className="h-6 w-6" />, path: "/" },
+    { name: "Главная", icon: <Home className="h-6 w-6" />, path: "/" },
     { name: "Новый заказ", icon: <PlusCircle className="h-6 w-6" />, path: "/new-order" },
-    { name: "Активные заказы", icon: <ListChecks className="h-6 w-6" />, path: "/active-orders" },
+    { name: "Все заказы", icon: <ListChecks className="h-6 w-6" />, path: "/active-orders" },
     { name: "Склад", icon: <PackageOpen className="h-6 w-6" />, path: "/warehouse", customNavigate: navigateToWarehouse },
     { name: "Заметки", icon: <FileText className="h-6 w-6" />, path: "/notes" },
   ];

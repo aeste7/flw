@@ -2,6 +2,7 @@ import { Order, OrderStatus } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { MoreHorizontal, Edit, Eye, Trash2 } from "lucide-react";
 import {
@@ -30,7 +31,7 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
   // Format date for display
   const formatDate = (dateString: string | Date) => {
     const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return format(date, "d MMM yyyy");
+    return format(date, "d MMM yyyy", { locale: ru });
   };
 
   // Format time period for display
@@ -42,7 +43,7 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
     } else {
       // Fallback to the time from dateTime
       const date = new Date(order.dateTime);
-      return format(date, "HH:mm"); // Use HH for 24-hour format
+      return format(date, "HH:mm", { locale: ru }); // Use HH for 24-hour format
     }
   };
 
