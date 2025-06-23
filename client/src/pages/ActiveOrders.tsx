@@ -249,6 +249,21 @@ export default function ActiveOrders() {
     setIsDeleteDialogOpen(true);
   };
   
+  // Add missing handleEdit function
+  const handleEdit = (orderId: number) => {
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+      setEditOrder(order);
+      setIsEditOpen(true);
+    }
+  };
+  
+  // Add missing handleDelete function
+  const handleDelete = (orderId: number) => {
+    setDeleteOrderId(orderId);
+    setIsDeleteDialogOpen(true);
+  };
+  
   // Add debugging to check orders data
   useEffect(() => {
     if (orders.length > 0) {
@@ -472,7 +487,10 @@ export default function ActiveOrders() {
                     <OrderItem
                       key={order.id}
                       order={order}
-                      onView={() => setViewOrder(order)}
+                      onView={() => {
+                        setViewOrder(order);
+                        setIsViewOpen(true);
+                      }}
                       onEdit={() => handleEdit(order.id)}
                       onDelete={() => handleDelete(order.id)}
                     />

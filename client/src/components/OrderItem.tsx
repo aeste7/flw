@@ -101,11 +101,11 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
   const getAvailableStatusTransitions = (): OrderStatusType[] => {
     switch (order.status) {
       case OrderStatus.New:
-        return [OrderStatus.New, OrderStatus.Assembled];
+        return [OrderStatus.Assembled] as OrderStatusType[];
       case OrderStatus.Assembled:
-        return [OrderStatus.Assembled, OrderStatus.Sent];
+        return [OrderStatus.Sent] as OrderStatusType[];
       case OrderStatus.Sent:
-        return [OrderStatus.Sent, OrderStatus.Finished];
+        return [OrderStatus.Finished] as OrderStatusType[];
       default:
         return [];
     }
@@ -149,9 +149,7 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
                       onClick={() => updateStatusMutation.mutate({ id: order.id, status })}
                       disabled={updateStatusMutation.isPending}
                     >
-                      {status === OrderStatus.Assembled && "Собран"}
-                      {status === OrderStatus.Sent && "В доставке"}
-                      {status === OrderStatus.Finished && "Доставлен"}
+                      {status}
                     </Button>
                   ))}
                 </div>
