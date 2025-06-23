@@ -17,7 +17,7 @@ export default function BottomNavigation() {
     { name: "Главная", icon: <Home className="h-6 w-6" />, path: "/" },
     { name: "Новый заказ", icon: <PlusCircle className="h-6 w-6" />, path: "/new-order" },
     { name: "Все заказы", icon: <ListChecks className="h-6 w-6" />, path: "/active-orders" },
-    { name: "Букеты", icon: <Flower className="h-6 w-6" />, path: "/bouquets" },
+    { name: "Витрина", icon: <Flower className="h-6 w-6" />, path: "/bouquets" },
     { name: "Склад", icon: <PackageOpen className="h-6 w-6" />, path: "/warehouse", customNavigate: navigateToWarehouse },
     { name: "Заметки", icon: <FileText className="h-6 w-6" />, path: "/notes" },
   ];

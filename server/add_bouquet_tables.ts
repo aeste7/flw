@@ -25,6 +25,11 @@ export async function addBouquetTables() {
       )
     `);
     
+    // Add showcase column to orders table
+    await db.execute(sql`
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS showcase BOOLEAN NOT NULL DEFAULT false
+    `);
+    
     console.log("Bouquet tables migration completed successfully");
   } catch (error) {
     console.error("Bouquet tables migration failed:", error);

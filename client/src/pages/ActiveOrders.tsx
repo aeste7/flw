@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -26,6 +26,31 @@ import FlowerSelector from "@/components/FlowerSelector";
 import { Checkbox } from "@/components/ui/checkbox"; 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
+// Skeleton component for loading state
+const OrderItemSkeleton = () => (
+  <div className="p-4 border rounded-lg space-y-3">
+    <div className="flex justify-between items-start">
+      <Skeleton className="h-5 w-3/5" />
+      <Skeleton className="h-5 w-1/5" />
+    </div>
+    <div className="flex justify-between items-center">
+      <Skeleton className="h-4 w-1/4" />
+      <Skeleton className="h-4 w-1/4" />
+    </div>
+    <div className="flex justify-end space-x-2">
+      <Skeleton className="h-8 w-16" />
+      <Skeleton className="h-8 w-16" />
+    </div>
+  </div>
+);
+
+const TABS = [
+  { value: "orders", label: "Заказы" },
+  { value: "delivery", label: "Доставка" },
+  { value: "pickup", label: "Самовывоз" },
+  { value: "completed", label: "Завершенные" },
+];
+
 export default function ActiveOrders() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -34,7 +59,6 @@ export default function ActiveOrders() {
   const tabFromUrl = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabFromUrl || "orders");
   const [, navigate] = useLocation();
-  const [showFinishedOrders, setShowFinishedOrders] = useState(false);
   
   // State for view and edit dialogs
   const [viewOrder, setViewOrder] = useState<Order | null>(null);
@@ -87,7 +111,7 @@ export default function ActiveOrders() {
   }, [activeTab, navigate]);
     
   // Then, define your queries
-  const { data: orders = [], isLoading } = useQuery<Order[]>({
+  const { data: orders = [], isLoading, refetch } = useQuery<Order[]>({
     queryKey: ['/api/orders'],
   });
 
@@ -235,31 +259,42 @@ export default function ActiveOrders() {
   }, [orders]);
 
   
-  const filteredOrders = orders.filter(order => {
-    // Add debugging
-    console.log(`Фильтруем заказ #${order.id} со статусом ${order.status} для вкладки ${activeTab}`);
-    
-    if (activeTab === "orders") {
-      // Keep pickup orders in the "orders" tab until they are sent
-      return (order.status === OrderStatus.New || order.status === OrderStatus.Assembled);
-    } else if (activeTab === "delivery") {
-      if (showFinishedOrders) {
-        return (order.status === OrderStatus.Sent || order.status === OrderStatus.Finished) && !order.pickup;
-      } else {
-        return order.status === OrderStatus.Sent && !order.pickup;
-      }
-    } else if (activeTab === "pickup") {
-      // Only show pickup orders in the "pickup" tab when they are sent or finished
-      if (showFinishedOrders) {
-        return order.pickup && (order.status === OrderStatus.Sent || order.status === OrderStatus.Finished);
-      } else {
-        return order.pickup && order.status === OrderStatus.Sent;
-      }
-    }
-    return false;
-  });
-  
+  // Filter orders based on the active tab
+  const filteredOrders = useMemo(() => {
+    if (!orders) return [];
 
+    return orders.filter((order) => {
+      switch (activeTab) {
+        case "orders":
+          // Exclude showcase orders, which have their own logic
+          if (order.showcase) return false;
+          // Orders tab shows new and assembled orders that are not for pickup
+          return (
+            (order.status === OrderStatus.New || order.status === OrderStatus.Assembled) &&
+            !order.pickup
+          );
+
+        case "delivery":
+          // Delivery tab shows orders that are sent and not for pickup
+          return order.status === OrderStatus.Sent && !order.pickup;
+
+        case "pickup":
+          // Pickup tab shows orders that are new or assembled and marked for pickup
+          return (
+            (order.status === OrderStatus.New || order.status === OrderStatus.Assembled) &&
+            order.pickup
+          );
+        
+        case "completed":
+          // Completed tab shows finished orders (regular and showcase)
+          return order.status === OrderStatus.Finished;
+
+        default:
+          return true;
+      }
+    });
+  }, [orders, activeTab]);
+  
   // Log the filtered results
   useEffect(() => {
     console.log("Отфильтрованные заказы:", filteredOrders);
@@ -413,155 +448,45 @@ export default function ActiveOrders() {
   
   return (
     <section className="max-w-3xl mx-auto">
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-3 w-full rounded-none">
-          <TabsTrigger value="orders">Заказы</TabsTrigger>
-          <TabsTrigger value="delivery">Доставка</TabsTrigger>
-          <TabsTrigger value="pickup">Самовывоз</TabsTrigger>
-        </TabsList>
-        
-        {/* Orders Tab Content */}
-        <TabsContent value="orders" className="p-4">
-          {isLoading ? (
-            // Loading skeleton
-            Array(3).fill(0).map((_, i) => (
-              <div key={i} className="mb-6">
-                <Skeleton className="h-4 w-40 mb-3" />
-                <div className="space-y-3">
-                  <Skeleton className="h-[120px] w-full rounded-lg" />
-                  <Skeleton className="h-[120px] w-full rounded-lg" />
-                </div>
-              </div>
-            ))
-          ) : Object.keys(groupedOrders).length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500">Заказы не найдены</p>
-            </div>
-          ) : (
-            Object.keys(groupedOrders).map(dateKey => (
-              <div key={dateKey} className="mb-6">
-                <h3 className="text-sm font-medium text-gray-500 mb-3">
-                  {formatDateHeading(dateKey)}
-                </h3>
-                
-                <div className="space-y-3">
-                  {groupedOrders[dateKey].map(order => (
+      <div className="flex-1 flex flex-col">
+        {/* Tabs for different order views */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            {TABS.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          
+          {TABS.map((tab) => (
+            <TabsContent key={tab.value} value={tab.value} className="p-4">
+              {isLoading ? (
+                // Loading skeleton
+                Array(3)
+                  .fill(0)
+                  .map((_, index) => <OrderItemSkeleton key={index} />)
+              ) : filteredOrders.length > 0 ? (
+                <div className="space-y-4">
+                  {filteredOrders.map((order) => (
                     <OrderItem
                       key={order.id}
                       order={order}
-                      onView={() => {
-                        setViewOrder(order);
-                        setIsViewOpen(true);
-                      }}
-                      onEdit={() => {
-                        setEditOrder(order);
-                        setIsEditOpen(true);
-                      }}
-                      onDelete={() => handleDeleteClick(order.id)} 
+                      onView={() => setViewOrder(order)}
+                      onEdit={() => handleEdit(order.id)}
+                      onDelete={() => handleDelete(order.id)}
                     />
                   ))}
                 </div>
-              </div>
-            ))
-          )}
-        </TabsContent>
-        
-        {/* Delivery Tab Content */}
-        <TabsContent value="delivery" className="p-4">
-          {/* Add the checkbox for showing finished orders */}
-          <div className="flex items-center space-x-2 mb-4">
-            <Checkbox 
-              id="showFinishedOrders" 
-              checked={showFinishedOrders}
-              onCheckedChange={(checked) => setShowFinishedOrders(checked === true)}
-            />
-            <Label 
-              htmlFor="showFinishedOrders" 
-              className="text-sm font-medium cursor-pointer"
-            >
-              Показывать завершённые заказы
-            </Label>
-          </div>
-          
-          {isLoading ? (
-            // Loading skeleton
-            Array(2).fill(0).map((_, i) => (
-              <div key={i} className="space-y-3">
-                <Skeleton className="h-[120px] w-full rounded-lg" />
-                <Skeleton className="h-[120px] w-full rounded-lg" />
-              </div>
-            ))
-          ) : filteredOrders.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500">Доставки не найдены</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredOrders.map(order => (
-                <OrderItem
-                  key={order.id}
-                  order={order}
-                  onView={() => {
-                    setViewOrder(order);
-                    setIsViewOpen(true);
-                  }}
-                  onDelete={() => handleDeleteClick(order.id)} 
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-        
-        {/* Pickup Tab Content */}
-        <TabsContent value="pickup" className="p-4">
-        <div className="flex items-center space-x-2 mb-4">
-            <Checkbox 
-              id="showFinishedOrders" 
-              checked={showFinishedOrders}
-              onCheckedChange={(checked) => setShowFinishedOrders(checked === true)}
-            />
-            <Label 
-              htmlFor="showFinishedOrders" 
-              className="text-sm font-medium cursor-pointer"
-            >
-              Показывать завершённые заказы
-            </Label>
-          </div>
-
-          {isLoading ? (
-            // Loading skeleton
-            Array(2).fill(0).map((_, i) => (
-              <div key={i} className="space-y-3">
-                <Skeleton className="h-[120px] w-full rounded-lg" />
-                <Skeleton className="h-[120px] w-full rounded-lg" />
-              </div>
-            ))
-          ) : filteredOrders.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500">Заказы на самовывоз не найдены</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredOrders.map(order => (
-                <OrderItem
-                  key={order.id}
-                  order={order}
-                  onView={() => {
-                    setViewOrder(order);
-                    setIsViewOpen(true);
-                  }}
-                  // onEdit={() => {
-                  //   setEditOrder(order);
-                  //   setIsEditOpen(true);
-                  // }}
-                  onDelete={() => handleDeleteClick(order.id)} 
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  Нет заказов для отображения
+                </div>
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
+      </div>
       
       {/* View Order Dialog */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
@@ -602,7 +527,9 @@ export default function ActiveOrders() {
                     </span>
                     
                     <span className="text-gray-500">Тип:</span>
-                    <span>{viewOrder.pickup ? "Самовывоз" : "Доставка"}</span>
+                    <span>
+                      {viewOrder.showcase ? "Продан с витрины" : (viewOrder.pickup ? "Самовывоз" : "Доставка")}
+                    </span>
                     
                     {viewOrder.notes && (
                       <>

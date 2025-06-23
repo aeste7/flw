@@ -1,4 +1,4 @@
-import { Order, OrderStatus } from "@shared/schema";
+import { Order, OrderStatus, OrderStatusType } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -97,22 +97,15 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
     }
   });
 
-
-  
-  // Handle status change
-  const handleStatusChange = (status: string) => {
-    updateStatusMutation.mutate({ id: order.id, status });
-  };
-  
   // Determine available status transitions based on current status
-  const getAvailableStatusTransitions = () => {
+  const getAvailableStatusTransitions = (): OrderStatusType[] => {
     switch (order.status) {
       case OrderStatus.New:
-        return [OrderStatus.Assembled];
+        return [OrderStatus.New, OrderStatus.Assembled];
       case OrderStatus.Assembled:
-        return [OrderStatus.Sent];
+        return [OrderStatus.Assembled, OrderStatus.Sent];
       case OrderStatus.Sent:
-        return [OrderStatus.Finished];
+        return [OrderStatus.Sent, OrderStatus.Finished];
       default:
         return [];
     }
@@ -127,11 +120,12 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
           <div className="flex justify-between items-start mb-2">
             <div>
               <h3 className="font-medium">
-                {order.to} {order.pickup && "• Самовывоз"}
+                {order.to} {order.pickup && !order.showcase && "• Самовывоз"}
+                {order.showcase && <span className="text-sm font-normal text-purple-600"> • Продан с витрины</span>}
               </h3>
               <p className="text-sm text-gray-500">{order.address}</p>
             </div>
-            <StatusBadge status={order.status} pickup={order.pickup} />
+            <StatusBadge status={order.status} pickup={order.pickup} showcase={order.showcase} />
           </div>
           
           <div className="flex justify-between items-center">
@@ -147,12 +141,12 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
             <div className="flex items-center space-x-2">
               {availableTransitions.length > 0 && (
                 <div className="flex space-x-2">
-                  {availableTransitions.map((status) => (
+                  {availableTransitions.map((status: OrderStatusType) => (
                     <Button 
                       key={status}
                       variant="outline" 
                       size="sm"
-                      onClick={() => handleStatusChange(status)}
+                      onClick={() => updateStatusMutation.mutate({ id: order.id, status })}
                       disabled={updateStatusMutation.isPending}
                     >
                       {status === OrderStatus.Assembled && "Собран"}

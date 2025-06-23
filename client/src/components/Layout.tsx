@@ -14,8 +14,8 @@ interface HeaderTitles {
 const headerTitles: HeaderTitles = {
   "/": "Цветочный менеджер",
   "/new-order": "Новый заказ",
-  "/active-orders": "Активные заказы",
-  "/bouquets": "Букеты",
+  "/active-orders": "Все заказы",
+  "/bouquets": "Витрина",
   "/new-bouquet": "Создать букет",
   "/warehouse": "Склад",
   "/notes": "Заметки",

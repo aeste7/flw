@@ -9,6 +9,7 @@ import { Warehouse, BouquetItem } from "@shared/schema";
 import { useLocation } from "wouter";
 import { ArrowLeft, Plus, X, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import FlowerSelector from "@/components/FlowerSelector";
 
 interface BouquetItemWithName extends BouquetItem {
   flowerName: string;
@@ -21,18 +22,16 @@ export default function NewBouquet() {
   
   const [description, setDescription] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
-  const [selectedFlowers, setSelectedFlowers] = useState<BouquetItemWithName[]>([]);
-  const [selectedFlower, setSelectedFlower] = useState("");
-  const [selectedAmount, setSelectedAmount] = useState(1);
+  const [selectedFlowers, setSelectedFlowers] = useState<Map<number, number>>(new Map());
 
   // Query for warehouse flowers
-  const { data: flowers = [] } = useQuery<Warehouse[]>({
+  const { data: flowers = [], isLoading } = useQuery<Warehouse[]>({
     queryKey: ['/api/flowers'],
   });
 
   // Create bouquet mutation
   const createBouquetMutation = useMutation({
-    mutationFn: async (data: { bouquet: { description: string; photo?: string | null }, items: BouquetItem[] }) => {
+    mutationFn: async (data: { bouquet: { description: string; photo?: string | null }, items: { flower: string; amount: number }[] }) => {
       const response = await fetch('/api/bouquets', {
         method: 'POST',
         headers: {
@@ -75,32 +74,17 @@ export default function NewBouquet() {
     }
   };
 
-  const addFlower = () => {
-    if (selectedFlower && selectedAmount > 0) {
-      const flower = flowers.find(f => f.flower === selectedFlower);
-      if (flower && flower.amount >= selectedAmount) {
-        const newItem: BouquetItemWithName = {
-          id: Date.now(), // Temporary ID for UI
-          bouquetId: 0, // Will be set by backend
-          flower: selectedFlower,
-          flowerName: selectedFlower,
-          amount: selectedAmount,
-        };
-        setSelectedFlowers([...selectedFlowers, newItem]);
-        setSelectedFlower("");
-        setSelectedAmount(1);
-      } else {
-        toast({
-          title: "Ошибка",
-          description: "Недостаточно цветов на складе",
-          variant: "destructive",
-        });
-      }
+  // Handle flower selection using the same pattern as NewOrder
+  const handleSelectFlower = (flowerId: number, amount: number) => {
+    const newSelectedFlowers = new Map(selectedFlowers);
+    
+    if (amount === 0) {
+      newSelectedFlowers.delete(flowerId);
+    } else {
+      newSelectedFlowers.set(flowerId, amount);
     }
-  };
-
-  const removeFlower = (index: number) => {
-    setSelectedFlowers(selectedFlowers.filter((_, i) => i !== index));
+    
+    setSelectedFlowers(newSelectedFlowers);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -115,7 +99,7 @@ export default function NewBouquet() {
       return;
     }
 
-    if (selectedFlowers.length === 0) {
+    if (selectedFlowers.size === 0) {
       toast({
         title: "Ошибка",
         description: "Добавьте хотя бы один цветок",
@@ -124,18 +108,25 @@ export default function NewBouquet() {
       return;
     }
 
+    // Convert selectedFlowers Map to items array
+    const items = Array.from(selectedFlowers.entries()).map(([flowerId, amount]) => {
+      const flower = flowers.find(f => f.id === flowerId);
+      return {
+        flower: flower?.flower || "",
+        amount,
+      };
+    });
+
     const bouquetData = {
       bouquet: {
         description: description.trim(),
         photo: photo,
       },
-      items: selectedFlowers.map(({ flower, amount }) => ({ flower, amount })),
+      items,
     };
 
     createBouquetMutation.mutate(bouquetData);
   };
-
-  const availableFlowers = flowers.filter(flower => flower.amount > 0);
 
   return (
     <section className="max-w-2xl mx-auto p-4">
@@ -218,69 +209,23 @@ export default function NewBouquet() {
             <CardTitle>Цветы в букете</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Label htmlFor="flower">Цветок</Label>
-                <select
-                  id="flower"
-                  value={selectedFlower}
-                  onChange={(e) => setSelectedFlower(e.target.value)}
-                  className="w-full mt-1 p-2 border border-gray-300 rounded-md"
-                >
-                  <option value="">Выберите цветок</option>
-                  {availableFlowers.map((flower) => (
-                    <option key={flower.id} value={flower.flower}>
-                      {flower.flower} (доступно: {flower.amount})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="w-24">
-                <Label htmlFor="amount">Количество</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  min="1"
-                  value={selectedAmount}
-                  onChange={(e) => setSelectedAmount(Number(e.target.value))}
-                  className="mt-1"
+            <div>
+              <Label htmlFor="flowers" className="block text-sm font-medium text-gray-700 mb-1">
+                Выберите цветы
+              </Label>
+              {isLoading ? (
+                <div className="p-4 text-center">Загружаются цветы...</div>
+              ) : (
+                <FlowerSelector
+                  flowers={flowers}
+                  selectedFlowers={selectedFlowers}
+                  onSelectFlower={handleSelectFlower}
                 />
-              </div>
-              <div className="flex items-end">
-                <Button
-                  type="button"
-                  onClick={addFlower}
-                  disabled={!selectedFlower || selectedAmount <= 0}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Добавить
-                </Button>
-              </div>
+              )}
+              {selectedFlowers.size === 0 && createBouquetMutation.isError && (
+                <p className="text-sm text-red-500 mt-1">Пожалуйста, выберите цветы</p>
+              )}
             </div>
-
-            {selectedFlowers.length > 0 && (
-              <div className="space-y-2">
-                <Label>Выбранные цветы:</Label>
-                {selectedFlowers.map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-2 bg-gray-50 rounded border"
-                  >
-                    <span>{item.flowerName} - {item.amount} шт.</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFlower(index)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -294,7 +239,7 @@ export default function NewBouquet() {
           </Button>
           <Button
             type="submit"
-            disabled={createBouquetMutation.isPending || selectedFlowers.length === 0}
+            disabled={createBouquetMutation.isPending || selectedFlowers.size === 0}
           >
             {createBouquetMutation.isPending ? "Создание..." : "Создать букет"}
           </Button>

@@ -5,10 +5,11 @@ import { cn } from "@/lib/utils";
 interface StatusBadgeProps {
   status: OrderStatusType;
   pickup?: boolean; // Add pickup as an optional boolean prop
+  showcase?: boolean; // Add showcase as an optional boolean prop
   className?: string;
 }
 
-export function StatusBadge({ status, pickup, className }: StatusBadgeProps) {
+export function StatusBadge({ status, pickup, showcase, className }: StatusBadgeProps) {
   const getStatusStyles = () => {
     switch (status) {
       case OrderStatus.New:
@@ -38,12 +39,20 @@ export function StatusBadge({ status, pickup, className }: StatusBadgeProps) {
       >
         {status}
       </Badge>
-      {pickup && (
+      {pickup && !showcase && (
         <Badge 
           variant="outline" 
           className="rounded-full font-medium py-0.5 bg-amber-100 text-amber-800 hover:bg-amber-100"
         >
           Самовывоз
+        </Badge>
+      )}
+      {showcase && (
+        <Badge 
+          variant="outline" 
+          className="rounded-full font-medium py-0.5 bg-purple-100 text-purple-800 hover:bg-purple-100"
+        >
+          Продан с витрины
         </Badge>
       )}
     </div>

@@ -27,7 +27,11 @@ export default function FlowerSelector({
     const currentAmount = selectedFlowers.get(flowerId) || 0;
     const newAmount = Math.max(0, currentAmount + change);
     
-    // Don't limit by flower.amount - let the projected inventory handle this
+    // Prevent adding more than available in warehouse
+    if (newAmount > flower.amount) {
+      return; // Don't allow exceeding available amount
+    }
+    
     onSelectFlower(flowerId, newAmount);
   };
   
@@ -55,7 +59,7 @@ export default function FlowerSelector({
               <div className="flex items-center">
                 <span className="font-medium">{flower.flower}</span>
                 <span className="ml-2 text-sm text-gray-500">
-                  Доступно: {flower.amount}
+                  ( {flower.amount} )
                   {showProjected && (
                     <span className={`ml-2 ${projectedAmount < 0 ? 'text-red-500 font-semibold' : 'text-green-500'}`}>
                       → {projectedAmount} {projectedAmount < 0 && '(недостаточно!)'}
@@ -87,7 +91,7 @@ export default function FlowerSelector({
                   size="icon"
                   className="w-8 h-8 rounded-full"
                   onClick={() => updateFlowerAmount(flower.id, 1)}
-                  disabled={projectedAmount !== undefined && projectedAmount < 0}
+                  disabled={selectedAmount >= flower.amount}
                 >
                   <PlusIcon className="h-4 w-4" />
                 </Button>

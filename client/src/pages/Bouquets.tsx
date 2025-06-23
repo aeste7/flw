@@ -105,7 +105,7 @@ export default function Bouquets() {
   return (
     <section className="max-w-4xl mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Букеты</h1>
+        
         <Button
           onClick={() => navigate("/new-bouquet")}
           className="flex items-center gap-2"

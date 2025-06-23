@@ -73,6 +73,7 @@ export const orders = pgTable("orders", {
   notes: text("notes"),
   status: text("status").notNull().default(OrderStatus.New),
   pickup: boolean("pickup").default(false).notNull(),
+  showcase: boolean("showcase").default(false).notNull(),
 });
 
 export const insertOrderSchema = createInsertSchema(orders).omit({

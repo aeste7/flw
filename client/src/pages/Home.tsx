@@ -26,7 +26,7 @@ export default function Home() {
   const menuItems = [
     { name: "Новый заказ", icon: <PlusCircle className="h-10 w-10 text-blue-500 mb-2" />, path: "/new-order" },
     { name: "Активные заказы", icon: <ListChecks className="h-10 w-10 text-amber-500 mb-2" />, path: "/active-orders" },
-    { name: "Букеты", icon: <Flower className="h-10 w-10 text-pink-500 mb-2" />, path: "/bouquets" },
+    { name: "Витрина", icon: <Flower className="h-10 w-10 text-pink-500 mb-2" />, path: "/bouquets" },
     { name: "Склад", icon: <PackageOpen className="h-10 w-10 text-emerald-500 mb-2" />, path: "/warehouse" },
     { name: "Заметки", icon: <FileText className="h-10 w-10 text-indigo-500 mb-2" />, path: "/notes" },
   ];
@@ -45,7 +45,7 @@ export default function Home() {
       <Card className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Букеты</CardTitle>
+            <CardTitle className="text-lg">Витрина</CardTitle>
             <Button
               variant="outline"
               size="sm"
