@@ -59,7 +59,7 @@ export default function FlowerItem({ flower }: FlowerItemProps) {
   
   // Format date
   const formatDate = (date: Date | string) => {
-    return format(new Date(date), "d MMMM yyyy", { locale: ru });
+    return format(new Date(date), "d MMMM yyyy HH:mm", { locale: ru });
   };
   
   // Update flower mutation

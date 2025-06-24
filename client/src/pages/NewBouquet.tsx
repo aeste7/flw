@@ -90,15 +90,6 @@ export default function NewBouquet() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!description.trim()) {
-      toast({
-        title: "Ошибка",
-        description: "Введите описание букета",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (selectedFlowers.size === 0) {
       toast({
         title: "Ошибка",
@@ -117,9 +108,12 @@ export default function NewBouquet() {
       };
     });
 
+    // Use description if provided, otherwise it will be auto-generated on the server
+    const finalDescription = description.trim() || "";
+
     const bouquetData = {
       bouquet: {
-        description: description.trim(),
+        description: finalDescription,
         photo: photo,
       },
       items,
@@ -149,12 +143,12 @@ export default function NewBouquet() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="description">Описание букета</Label>
+              <Label htmlFor="description">Описание букета (необязательно)</Label>
               <Textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Опишите букет..."
+                placeholder="Опишите букет или оставьте пустым для автоматической генерации..."
                 className="mt-1"
                 rows={3}
               />

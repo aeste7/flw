@@ -172,44 +172,6 @@ export default function Warehouse() {
     }
   });
 
-  const updateOrderMutation = useMutation({
-    mutationFn: async (data: any) => {
-      if (!orderId) throw new Error("Order ID is required");
-      
-      // Just send the update to the server - no client-side inventory adjustments
-      const orderResponse = await apiRequest('PUT', `/api/orders/${orderId}`, data);
-      return orderResponse;
-    },
-    onSuccess: async () => {
-      // Invalidate and refetch queries in sequence
-      await queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/flowers'] });
-      
-      // Force refetch the flowers data
-      await queryClient.refetchQueries({ queryKey: ['/api/flowers'] });
-      
-      toast({
-        title: "Обновление заказа",
-        description: "Заказ был успешно обновлён",
-      });
-      
-      // Add a delay to ensure data is refreshed before navigation
-      setTimeout(() => {
-        navigate("/active-orders");
-      }, 500);
-    },
-    onError: (error) => {
-      toast({
-        title: "Ошибка",
-        description: "Не удалось обновить заказ, пожалуйста, повторите попытку",
-        variant: "destructive",
-      });
-      console.error("Error updating order:", error);
-    }
-  });
-  
-  
-  
   const clearWriteoffsMutation = useMutation({
     mutationFn: async () => {
       return await apiRequest('DELETE', '/api/writeoffs');
@@ -241,7 +203,7 @@ export default function Warehouse() {
   // Format date for display
   const formatDate = (dateTime: string | Date) => {
     const date = typeof dateTime === 'string' ? new Date(dateTime) : dateTime;
-    return format(date, "MMMM d, yyyy 'в' h:mm a", { locale: ru });
+    return format(date, "d MMMM yyyy HH:mm", { locale: ru });
   };
 
   // Handle write-off
@@ -383,7 +345,7 @@ export default function Warehouse() {
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-medium">{writeoff.flower}</h4>
-                        <p className="text-sm text-gray-600">{formatDate(writeoff.dateTime)}</p>
+                        <p className="text-sm text-gray-600">Списано: {formatDate(writeoff.dateTime)}</p>
                       </div>
                       <span className="bg-rose-100 text-rose-700 px-2 py-1 rounded text-xs font-medium">
                         -{writeoff.amount} шт.

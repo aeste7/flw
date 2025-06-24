@@ -14,6 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { Edit, Trash2 } from "lucide-react";
 
 interface NoteItemProps {
   note: Note;
@@ -94,7 +95,7 @@ export default function NoteItem({ note }: NoteItemProps) {
   
   // Format date
   const formatDate = (date: Date | string) => {
-    return format(new Date(date), "d MMMM yyyy", { locale: ru });
+    return format(new Date(date), "d MMMM yyyy HH:mm", { locale: ru });
   };
   
   return (
@@ -108,21 +109,21 @@ export default function NoteItem({ note }: NoteItemProps) {
           <span className="text-xs text-gray-500">{formatDate(note.dateTime)}</span>
           <div className="space-x-2">
             <Button 
-              variant="link" 
+              variant="outline"
               size="sm"
-              className="text-indigo-600 hover:text-indigo-800 p-0"
+              className="text-indigo-600 hover:text-indigo-800 border-indigo-600 hover:bg-indigo-50"
               onClick={() => setShowEditModal(true)}
             >
-              Редактировать
+              <Edit className="h-4 w-4" />
             </Button>
             <Button 
-              variant="link" 
+              variant="outline"
               size="sm"
-              className="text-red-600 hover:text-red-800 p-0"
+              className="text-red-600 hover:text-red-800 border-red-600 hover:bg-red-50"
               onClick={handleDelete}
               disabled={deleteNoteMutation.isPending}
             >
-              Удалить
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </CardFooter>

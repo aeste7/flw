@@ -492,7 +492,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertBouquetSchema.parse(req.body.bouquet);
       const items = req.body.items || [];
       
+      // Create bouquet first
       const bouquet = await storage.createBouquet(validatedData, items);
+      
+      // Auto-generate description if not provided
+      if (!validatedData.description || validatedData.description.trim() === '') {
+        const autoDescription = `Букет №${bouquet.id}`;
+        await storage.updateBouquet(bouquet.id, { description: autoDescription });
+        bouquet.description = autoDescription;
+      }
+      
       return res.status(201).json(bouquet);
     } catch (error) {
       if (error instanceof z.ZodError) {
