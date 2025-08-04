@@ -469,7 +469,7 @@ export default function EditOrder() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="from">От</Label>
+            <Label htmlFor="from">Отправитель</Label>
             <Input
               id="from"
               name="from"
@@ -480,7 +480,7 @@ export default function EditOrder() {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="to">К</Label>
+            <Label htmlFor="to">Получатель</Label>
             <Input
               id="to"
               name="to"
@@ -527,7 +527,7 @@ export default function EditOrder() {
               onChange={handleInputChange}
               ref={timeFromRef}
               className="time-input"
-              placeholder="HH:MM"
+              placeholder="чч:мм"
               maxLength={5}
               required
             />
@@ -543,7 +543,7 @@ export default function EditOrder() {
               onChange={handleInputChange}
               ref={timeToRef}
               className="time-input"
-              placeholder="HH:MM"
+              placeholder="чч:мм"
               maxLength={5}
               required
             />

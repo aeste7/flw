@@ -57,6 +57,48 @@
   }
 }
 
+/* Date input styling */
+input[type="date"] {
+  position: relative;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+/* Custom date input styling for better appearance */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background: transparent;
+  bottom: 0;
+  color: transparent;
+  cursor: pointer;
+  height: auto;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: auto;
+}
+
+/* Date input focus states */
+input[type="date"]:focus {
+  outline: none;
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+}
+
+/* Date input hover states */
+input[type="date"]:hover {
+  border-color: hsl(var(--primary) / 0.5);
+}
+
+/* Date input placeholder styling */
+input[type="date"]:not([value]) {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Date input value styling */
+input[type="date"]:not(:placeholder-shown) {
+  color: hsl(var(--foreground));
+}
 
 /* Force 24-hour time format */
 .time-input::-webkit-datetime-edit-ampm-field {
@@ -74,3 +116,11 @@ input[type="time"].time-input {
   -moz-appearance: textfield;
 }
 
+.new-order-date-input {
+  padding-top: 8px;
+}
+
+
+footer button {
+  align-self: start;
+}

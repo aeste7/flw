@@ -733,7 +733,7 @@ const handleSubmit = (e: React.FormEvent) => {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="from">От</Label>
+            <Label htmlFor="from">Отправитель</Label>
             <Input
               id="from"
               name="from"
@@ -744,7 +744,7 @@ const handleSubmit = (e: React.FormEvent) => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="to">К</Label>
+            <Label htmlFor="to">Получатель</Label>
             <Input
               id="to"
               name="to"
@@ -791,7 +791,7 @@ const handleSubmit = (e: React.FormEvent) => {
               onChange={handleInputChange}
               ref={timeFromRef}
               className="time-input"
-              placeholder="HH:MM"
+              placeholder="чч:мм"
               maxLength={5}
               required
             />
@@ -807,7 +807,7 @@ const handleSubmit = (e: React.FormEvent) => {
               onChange={handleInputChange}
               ref={timeToRef}
               className="time-input"
-              placeholder="HH:MM"
+              placeholder="чч:мм"
               maxLength={5}
               required
             />

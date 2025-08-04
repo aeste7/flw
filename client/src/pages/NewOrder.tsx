@@ -336,7 +336,7 @@ useEffect(() => {
                 name="from"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>От</FormLabel>
+                    <FormLabel>Отправитель</FormLabel>
                     <FormControl>
                       <Input placeholder="Имя отправителя" {...field} />
                     </FormControl>
@@ -354,7 +354,7 @@ useEffect(() => {
                   
                   return (
                     <FormItem>
-                      <FormLabel>К</FormLabel>
+                      <FormLabel>Получатель</FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="Имя получателя" 
@@ -401,9 +401,9 @@ useEffect(() => {
                   control={form.control}
                   name="date"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="new-order-date-input">
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input type="date" {...field} className="new-order-date-input" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -424,7 +424,7 @@ useEffect(() => {
                             {...field} 
                             ref={timeFromRef}
                             className="time-input"
-                            placeholder="HH:MM"
+                            placeholder="чч:мм"
                             maxLength={5}
                             name="timeFrom" // Ensure name attribute is set
                           />
@@ -449,7 +449,7 @@ useEffect(() => {
                             {...field} 
                             ref={timeToRef}
                             className="time-input"
-                            placeholder="HH:MM"
+                            placeholder="чч:мм"
                             maxLength={5}
                             name="timeTo" // Ensure name attribute is set
                           />
