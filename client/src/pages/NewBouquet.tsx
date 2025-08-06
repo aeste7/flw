@@ -10,6 +10,7 @@ import { useLocation } from "wouter";
 import { ArrowLeft, Plus, X, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FlowerSelector from "@/components/FlowerSelector";
+import heic2any from "heic2any";
 
 interface BouquetItemWithName extends BouquetItem {
   flowerName: string;
@@ -23,6 +24,7 @@ export default function NewBouquet() {
   const [description, setDescription] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
   const [selectedFlowers, setSelectedFlowers] = useState<Map<number, number>>(new Map());
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
 
   // Query for warehouse flowers
   const { data: flowers = [], isLoading } = useQuery<Warehouse[]>({
@@ -62,15 +64,51 @@ export default function NewBouquet() {
     },
   });
 
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setPhoto(result);
-      };
-      reader.readAsDataURL(file);
+      setIsProcessingPhoto(true);
+      try {
+        let processedFile = file;
+        
+        // Check if the file is a HEIC/HEIF file
+        if (file.type === 'image/heic' || file.type === 'image/heif' || 
+            file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+          
+          // Convert HEIC to JPEG using heic2any
+          const convertedBlob = await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.8
+          });
+          
+          // Handle both single blob and array of blobs
+          const blobToUse = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+          
+          // Create a new File object with the converted data
+          processedFile = new File([blobToUse], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
+            type: 'image/jpeg'
+          });
+        }
+        
+        // Read the file as data URL
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result as string;
+          setPhoto(result);
+          setIsProcessingPhoto(false);
+        };
+        reader.readAsDataURL(processedFile);
+        
+      } catch (error) {
+        console.error('Error processing photo:', error);
+        setIsProcessingPhoto(false);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось обработать фотографию. Попробуйте другой формат.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -160,7 +198,7 @@ export default function NewBouquet() {
                 <Input
                   id="photo"
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.heic,.heif"
                   onChange={handlePhotoUpload}
                   className="hidden"
                 />
@@ -170,9 +208,10 @@ export default function NewBouquet() {
                     variant="outline"
                     onClick={() => document.getElementById('photo')?.click()}
                     className="flex items-center gap-2"
+                    disabled={isProcessingPhoto}
                   >
                     <Upload className="h-4 w-4" />
-                    Загрузить фото
+                    {isProcessingPhoto ? "Обработка..." : "Загрузить фото"}
                   </Button>
                   {photo && (
                     <div className="relative">
@@ -193,6 +232,9 @@ export default function NewBouquet() {
                     </div>
                   )}
                 </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Поддерживаемые форматы: JPG, PNG, GIF, HEIC. HEIC файлы будут автоматически конвертированы в JPG.
+                </p>
               </div>
             </div>
           </CardContent>
