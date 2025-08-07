@@ -10,7 +10,15 @@ import { useLocation } from "wouter";
 import { ArrowLeft, Plus, X, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FlowerSelector from "@/components/FlowerSelector";
-import heic2any from "heic2any";
+import { resizeImage, fileToBase64, isHeicFile } from "@/lib/imageUtils";
+
+// Dynamic import for heic2any to handle potential module resolution issues
+let heic2any: any = null;
+try {
+  heic2any = require("heic2any");
+} catch (error) {
+  console.warn("heic2any not available, HEIC conversion will be disabled");
+}
 
 interface BouquetItemWithName extends BouquetItem {
   flowerName: string;
@@ -72,33 +80,53 @@ export default function NewBouquet() {
         let processedFile = file;
         
         // Check if the file is a HEIC/HEIF file
-        if (file.type === 'image/heic' || file.type === 'image/heif' || 
-            file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
-          
-          // Convert HEIC to JPEG using heic2any
-          const convertedBlob = await heic2any({
-            blob: file,
-            toType: "image/jpeg",
-            quality: 0.8
+        if (isHeicFile(file) && heic2any) {
+          try {
+            // Convert HEIC to JPEG using heic2any
+            const convertedBlob = await heic2any({
+              blob: file,
+              toType: "image/jpeg",
+              quality: 0.8
+            });
+            
+            // Handle both single blob and array of blobs
+            const blobToUse = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+            
+            // Create a new File object with the converted data
+            processedFile = new File([blobToUse], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
+              type: 'image/jpeg'
+            });
+          } catch (conversionError) {
+            console.warn('HEIC conversion failed:', conversionError);
+            toast({
+              title: "Предупреждение",
+              description: "HEIC файл не может быть конвертирован. Попробуйте JPG или PNG формат.",
+              variant: "destructive",
+            });
+            return;
+          }
+        } else if (isHeicFile(file)) {
+          // HEIC file but heic2any is not available
+          toast({
+            title: "Ошибка",
+            description: "HEIC файлы не поддерживаются. Пожалуйста, используйте JPG или PNG формат.",
+            variant: "destructive",
           });
-          
-          // Handle both single blob and array of blobs
-          const blobToUse = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
-          
-          // Create a new File object with the converted data
-          processedFile = new File([blobToUse], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
-            type: 'image/jpeg'
-          });
+          return;
         }
         
-        // Read the file as data URL
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const result = e.target?.result as string;
-          setPhoto(result);
-          setIsProcessingPhoto(false);
-        };
-        reader.readAsDataURL(processedFile);
+        // Resize image to maximum 600px
+        try {
+          processedFile = await resizeImage(processedFile, 600, 600);
+        } catch (resizeError) {
+          console.warn('Image resize failed:', resizeError);
+          // Continue with original file if resize fails
+        }
+        
+        // Convert to base64
+        const base64Data = await fileToBase64(processedFile);
+        setPhoto(base64Data);
+        setIsProcessingPhoto(false);
         
       } catch (error) {
         console.error('Error processing photo:', error);
@@ -233,7 +261,8 @@ export default function NewBouquet() {
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Поддерживаемые форматы: JPG, PNG, GIF, HEIC. HEIC файлы будут автоматически конвертированы в JPG.
+                  Поддерживаемые форматы: JPG, PNG, GIF{heic2any ? ', HEIC (автоматическая конвертация в JPG)' : ''}. 
+                  Фотографии автоматически уменьшаются до 600px для оптимизации.
                 </p>
               </div>
             </div>
