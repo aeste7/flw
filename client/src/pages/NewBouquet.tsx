@@ -12,13 +12,22 @@ import { useToast } from "@/hooks/use-toast";
 import FlowerSelector from "@/components/FlowerSelector";
 import { resizeImage, fileToBase64, isHeicFile } from "@/lib/imageUtils";
 
-// Dynamic import for heic2any to handle potential module resolution issues
+// Dynamic import for heic2any
 let heic2any: any = null;
-try {
-  heic2any = require("heic2any");
-} catch (error) {
-  console.warn("heic2any not available, HEIC conversion will be disabled");
-}
+
+// Load heic2any dynamically
+const loadHeic2Any = async () => {
+  try {
+    const module = await import("heic2any");
+    heic2any = module.default || module;
+    console.log("heic2any loaded successfully");
+  } catch (error) {
+    console.warn("heic2any not available, HEIC conversion will be disabled:", error);
+  }
+};
+
+// Load it immediately
+loadHeic2Any();
 
 interface BouquetItemWithName extends BouquetItem {
   flowerName: string;
@@ -80,39 +89,46 @@ export default function NewBouquet() {
         let processedFile = file;
         
         // Check if the file is a HEIC/HEIF file
-        if (isHeicFile(file) && heic2any) {
-          try {
-            // Convert HEIC to JPEG using heic2any
-            const convertedBlob = await heic2any({
-              blob: file,
-              toType: "image/jpeg",
-              quality: 0.8
-            });
-            
-            // Handle both single blob and array of blobs
-            const blobToUse = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
-            
-            // Create a new File object with the converted data
-            processedFile = new File([blobToUse], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
-              type: 'image/jpeg'
-            });
-          } catch (conversionError) {
-            console.warn('HEIC conversion failed:', conversionError);
+        if (isHeicFile(file)) {
+          // Wait for heic2any to be loaded if it's not already
+          if (!heic2any) {
+            await loadHeic2Any();
+          }
+          
+          if (heic2any) {
+            try {
+              // Convert HEIC to JPEG using heic2any
+              const convertedBlob = await heic2any({
+                blob: file,
+                toType: "image/jpeg",
+                quality: 0.8
+              });
+              
+              // Handle both single blob and array of blobs
+              const blobToUse = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+              
+              // Create a new File object with the converted data
+              processedFile = new File([blobToUse], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
+                type: 'image/jpeg'
+              });
+            } catch (conversionError) {
+              console.warn('HEIC conversion failed:', conversionError);
+              toast({
+                title: "Предупреждение",
+                description: "HEIC файл не может быть конвертирован. Попробуйте JPG или PNG формат.",
+                variant: "destructive",
+              });
+              return;
+            }
+          } else {
+            // HEIC file but heic2any is not available
             toast({
-              title: "Предупреждение",
-              description: "HEIC файл не может быть конвертирован. Попробуйте JPG или PNG формат.",
+              title: "Ошибка",
+              description: "HEIC файлы не поддерживаются. Пожалуйста, используйте JPG или PNG формат.",
               variant: "destructive",
             });
             return;
           }
-        } else if (isHeicFile(file)) {
-          // HEIC file but heic2any is not available
-          toast({
-            title: "Ошибка",
-            description: "HEIC файлы не поддерживаются. Пожалуйста, используйте JPG или PNG формат.",
-            variant: "destructive",
-          });
-          return;
         }
         
         // Resize image to maximum 600px
