@@ -30,7 +30,7 @@ export function StatusBadge({ status, pickup, showcase, className }: StatusBadge
   // Special case: for pickup orders with status "В доставке", show "ожидает самовывоз"
   const getDisplayText = () => {
     if (pickup && status === OrderStatus.Sent) {
-      return "ожидает самовывоз";
+      return "Ожидает самовывоза";
     }
     return status;
   };

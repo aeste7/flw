@@ -148,17 +148,24 @@ export default function OrderItem({ order, onView, onEdit, onDelete, currentTab 
             <div className="flex items-center space-x-2">
               {availableTransitions.length > 0 && (
                 <div className="flex space-x-2">
-                  {availableTransitions.map((status: OrderStatusType) => (
-                    <Button 
-                      key={status}
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => updateStatusMutation.mutate({ id: order.id, status })}
-                      disabled={updateStatusMutation.isPending}
-                    >
-                      {status}
-                    </Button>
-                  ))}
+                  {availableTransitions.map((status: OrderStatusType) => {
+                    // For pickup orders with status "В доставке", show "Заказ забрали" instead of "Доставлен"
+                    const buttonText = (order.pickup && order.status === OrderStatus.Sent && status === OrderStatus.Finished) 
+                      ? "Заказ забрали" 
+                      : status;
+                    
+                    return (
+                      <Button 
+                        key={status}
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => updateStatusMutation.mutate({ id: order.id, status })}
+                        disabled={updateStatusMutation.isPending}
+                      >
+                        {buttonText}
+                      </Button>
+                    );
+                  })}
                 </div>
               )}
               
