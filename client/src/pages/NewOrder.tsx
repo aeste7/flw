@@ -113,7 +113,7 @@ export default function NewOrder() {
       await apiRequest('POST', '/api/orders', {
         order: {
           from: data.from,
-          to: data.pickup ? "Самовывоз" : data.to,
+          to: data.pickup ? data.from : data.to,
           address: data.pickup ? "Магазин" : data.address,
           dateTime: dateTime.toISOString(),
           timeFrom: data.timeFrom,
@@ -471,7 +471,19 @@ useEffect(() => {
                     <FormControl>
                       <Checkbox
                         checked={field.value}
-                        onCheckedChange={field.onChange}
+                        onCheckedChange={(checked) => {
+                          field.onChange(checked);
+                          
+                          // Handle pickup checkbox logic
+                          if (checked) {
+                            // If pickup is checked, copy "from" value to "to"
+                            const fromValue = form.getValues("from");
+                            form.setValue("to", fromValue);
+                          } else {
+                            // If pickup is unchecked, clear the "to" field
+                            form.setValue("to", "");
+                          }
+                        }}
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">

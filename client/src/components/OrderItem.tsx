@@ -21,9 +21,10 @@ interface OrderItemProps {
   onView?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  currentTab?: string;
 }
 
-export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItemProps) {
+export default function OrderItem({ order, onView, onEdit, onDelete, currentTab }: OrderItemProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
@@ -101,11 +102,15 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
   const getAvailableStatusTransitions = (): OrderStatusType[] => {
     switch (order.status) {
       case OrderStatus.New:
-        return [OrderStatus.Assembled] as OrderStatusType[];
+        // For pickup orders, skip "Собран" and go directly to "В доставке"
+        if (order.pickup) {
+          return [OrderStatus.Sent];
+        }
+        return [OrderStatus.Assembled];
       case OrderStatus.Assembled:
-        return [OrderStatus.Sent] as OrderStatusType[];
+        return [OrderStatus.Sent];
       case OrderStatus.Sent:
-        return [OrderStatus.Finished] as OrderStatusType[];
+        return [OrderStatus.Finished];
       default:
         return [];
     }
@@ -120,7 +125,7 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
           <div className="flex justify-between items-start mb-2">
             <div>
               <h3 className="font-medium">
-                {order.to} {order.pickup && !order.showcase && "• Самовывоз"}
+                {order.to} 
                 {order.showcase && <span className="text-sm font-normal text-purple-600"> • Продан с витрины</span>}
               </h3>
               <p className="text-sm text-gray-500">{order.address}</p>
@@ -129,15 +134,17 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
           </div>
           
           <div className="flex justify-between items-center">
-            <div className="text-sm">
-              <span className="text-gray-500">Дата: </span>
-              <span>{formatDate(order.dateTime)}</span>
+            <div>
+              <div className="text-sm">
+                <span className="text-gray-500">🗓 </span>
+                <span>{formatDate(order.dateTime)}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-500">🕓 </span>
+                <span>{formatTimePeriod(order)}</span>
+              </div>
             </div>
-            <div className="text-sm">
-              <span className="text-gray-500">Время: </span>
-              <span>{formatTimePeriod(order)}</span>
-            </div>
-            
+
             <div className="flex items-center space-x-2">
               {availableTransitions.length > 0 && (
                 <div className="flex space-x-2">
@@ -168,7 +175,7 @@ export default function OrderItem({ order, onView, onEdit, onDelete }: OrderItem
                       <span>Просмотр</span>
                     </DropdownMenuItem>
                   )}
-                  {onEdit && (
+                  {onEdit && currentTab !== "completed" && (
                     // In OrderItem.tsx, modify the onEdit handler to navigate to the edit page
                     <DropdownMenuItem onClick={() => navigate(`/edit-order/${order.id}`)}>
                       <Edit className="mr-2 h-4 w-4" />

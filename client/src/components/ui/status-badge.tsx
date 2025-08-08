@@ -27,19 +27,35 @@ export function StatusBadge({ status, pickup, showcase, className }: StatusBadge
     }
   };
 
+  // Special case: for pickup orders with status "В доставке", show "ожидает самовывоз"
+  const getDisplayText = () => {
+    if (pickup && status === OrderStatus.Sent) {
+      return "ожидает самовывоз";
+    }
+    return status;
+  };
+
+  // Special case: for pickup orders with status "В доставке", use amber styling
+  const getStatusStylesForDisplay = () => {
+    if (pickup && status === OrderStatus.Sent) {
+      return "bg-amber-100 text-amber-800 hover:bg-amber-100";
+    }
+    return getStatusStyles();
+  };
+
   return (
     <div className="flex gap-2">
       <Badge 
         variant="outline" 
         className={cn(
           "rounded-full font-medium py-0.5", 
-          getStatusStyles(),
+          getStatusStylesForDisplay(),
           className
         )}
       >
-        {status}
+        {getDisplayText()}
       </Badge>
-      {pickup && !showcase && (
+      {pickup && !showcase && status !== OrderStatus.Sent && (
         <Badge 
           variant="outline" 
           className="rounded-full font-medium py-0.5 bg-amber-100 text-amber-800 hover:bg-amber-100"

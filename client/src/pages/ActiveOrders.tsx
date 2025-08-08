@@ -294,11 +294,10 @@ export default function ActiveOrders() {
           return order.status === OrderStatus.Sent && !order.pickup;
 
         case "pickup":
-          // Pickup tab shows orders that are new or assembled and marked for pickup
-          return (
-            (order.status === OrderStatus.New || order.status === OrderStatus.Assembled) &&
-            order.pickup
-          );
+          // Pickup tab shows all orders marked for pickup, excluding deleted and finished orders
+          return order.pickup && 
+                 order.status !== OrderStatus.Deleted && 
+                 order.status !== OrderStatus.Finished;
         
         case "completed":
           // Completed tab shows finished orders (regular and showcase)
@@ -487,6 +486,7 @@ export default function ActiveOrders() {
                     <OrderItem
                       key={order.id}
                       order={order}
+                      currentTab={activeTab}
                       onView={() => {
                         setViewOrder(order);
                         setIsViewOpen(true);
